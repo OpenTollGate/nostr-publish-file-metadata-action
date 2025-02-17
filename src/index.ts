@@ -1,61 +1,94 @@
-import {getInput, setFailed, setOutput} from "@actions/core"
-import {readFileSync} from 'fs';
-import {NDKPrivateKeySigner, NostrEvent} from "@nostr-dev-kit/ndk";
-import {BlossomClient, EventTemplate, SignedEvent} from "blossom-client-sdk";
-import mime from "mime";
+// src/nip94-publisher.ts
+import { getInput, setFailed, setOutput } from "@actions/core";
+import { SimplePool, nip19 } from "nostr-tools";
+import { getPublicKey, finalizeEvent } from "nostr-tools/pure";
+import WebSocket from "ws";
 
-console.log('Starting blossom Upload');
+global.WebSocket = WebSocket;
 
-async function upload(filePath: string, host: string, nostrPrivateKey: string): Promise<void> {
-    const data = readFileSync(filePath, 'utf-8');
+interface NIP94Inputs {
+  relays: string[];
+  url: string;
+  mimeType: string;
+  fileHash: string;
+  content: string;
+  originalHash?: string;
+  size?: number;
+  dimensions?: string;
+  nsec: string;
+}
 
-    const fileType = mime.getType(filePath);
-    const blob = new Blob([data], {type: fileType?.toString()});
+async function publishNIP94Event(inputs: NIP94Inputs) {
+  const pool = new SimplePool();
+  try {
+    const tags = [
+      ["url", inputs.url],
+      ["m", inputs.mimeType],
+      ["x", inputs.fileHash],
+      ...(inputs.originalHash ? [["ox", inputs.originalHash]] : []),
+      ...(inputs.size ? [["size", inputs.size.toString()]] : []),
+      ...(inputs.dimensions ? [["dim", inputs.dimensions]] : []),
+    ];
 
-    async function signer(event: EventTemplate): Promise<SignedEvent> {
-        const signer = new NDKPrivateKeySigner(nostrPrivateKey);
-        const pubkey = await signer.user().then(u => u.pubkey)
+    const eventTemplate = {
+      kind: 1063,
+      created_at: Math.floor(Date.now() / 1000),
+      tags,
+      content: inputs.content,
+    };
 
-        const signature =  await signer.sign(event as NostrEvent);
+    const signedEvent = finalizeEvent(eventTemplate, inputs.nsec);
+    
+    await Promise.race([
+      pool.publish(inputs.relays, signedEvent),
+      new Promise((_, reject) =>
+        setTimeout(() => reject("Publish timeout after 30s"), 30000)
+      ),
+    ]);
 
-        const y = event as NostrEvent
-        return {...event, pubkey: pubkey, sig: signature, id: y.id!};
-    }
-
-    const client = new BlossomClient(host, signer);
-    const uploadAuthEvent = await client.createUploadAuth(blob, 'Upload file')
-    const result = await client.uploadBlob(blob, {auth: uploadAuthEvent})
-
-    setOutput("blossomUrl", result.url);
-    setOutput("blossomHash", result.sha256);
-    console.log(`Blob uploaded!, ${result.url}`);
+    return {
+      eventId: signedEvent.id,
+      noteId: nip19.noteEncode(signedEvent.id),
+      rawEvent: signedEvent,
+    };
+  } finally {
+    pool.close(inputs.relays);
+  }
 }
 
 try {
-    // Fetch the value of the input 'who-to-greet' specified in action.yml
-    const host = getInput('host');
-    const filePath = getInput('filePath');
-    const nostrPrivateKey = getInput('nostrPrivateKey');
+  const relays = getInput("relays").split(",");
+  const url = getInput("url");
+  const mimeType = getInput("mimeType");
+  const fileHash = getInput("fileHash");
+  const content = getInput("content");
+  const nsec = getInput("nsec");
+  
+  const inputs: NIP94Inputs = {
+    relays,
+    url,
+    mimeType,
+    fileHash,
+    content,
+    nsec,
+    originalHash: getInput("originalHash") || undefined,
+    size: Number(getInput("size")) || undefined,
+    dimensions: getInput("dimensions") || undefined,
+  };
 
-    console.log(`Uploading file '${filePath}' to host: '${host}'!`);
-
-    upload(filePath, host, nostrPrivateKey)
-        .catch((error) => {
-            console.error("Blossom Upload failed with error", error);
-
-            if(error instanceof Error) {
-                setFailed(error.message);
-            } else{
-                setFailed("unexpected error");
-            }
-        })
-
+  publishNIP94Event(inputs)
+    .then(result => {
+      setOutput("eventId", result.eventId);
+      setOutput("noteId", result.noteId);
+      console.log(`Published NIP-94 event: ${result.noteId}`);
+      console.log(`View on clients:
+- https://snort.social/e/${result.noteId}
+- https://primal.net/e/${result.eventId}`);
+    })
+    .catch(err => {
+      throw new Error(`NIP-94 publish failed: ${err}`);
+    });
 } catch (error) {
-    console.error("Blossom Upload failed with error", error);
-
-    if(error instanceof Error) {
-        setFailed(error.message);
-    } else{
-        setFailed("unexpected error");
-    }
+  console.error("Action failed:", error instanceof Error ? error.message : error);
+  setFailed("NIP-94 publication failed");
 }

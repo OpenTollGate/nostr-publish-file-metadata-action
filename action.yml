@@ -1,23 +1,38 @@
-name: 'Blossom File Uploader'
-description: 'Uploads files to a Blossom server with Nostr authentication'
-branding:
-  color: purple
-  icon: upload
+name: 'NIP-94 Metadata Publisher'
+description: 'Publishes NIP-94 file metadata events to Nostr'
 inputs:
-  host:
-    description: 'URL of the Blossom server to upload to (e.g "https://blossom.example.com")'
+  relays:
+    description: 'Comma-separated list of Nostr relays'
     required: true
-  filePath:
-    description: 'Path to the file to upload (relative to repository root)'
+  url:
+    description: 'File URL from Blossom upload'
     required: true
-  nostrPrivateKey:
-    description: 'Nostr NSEC private for signing upload authorization'
+  mimeType:
+    description: 'MIME type of the file'
     required: true
+  fileHash:
+    description: 'SHA256 hash of uploaded file'
+    required: true
+  content:
+    description: 'Human-readable description of file contents'
+    required: true
+  nsec:
+    description: 'Nostr nsec for signing'
+    required: true
+  originalHash:
+    description: 'Original file hash before transformations (optional)'
+    required: false
+  size:
+    description: 'File size in bytes (optional)'
+    required: false
+  dimensions:
+    description: 'Image/video dimensions in WxH format (optional)'
+    required: false
 outputs:
-  blossomUrl:
-    description: 'Full URL of the uploaded file on Blossom server'
-  blossomHash:
-    description: 'SHA256 hash of the uploaded file'
+  eventId:
+    description: 'Raw Nostr event ID'
+  noteId:
+    description: 'Bech32-encoded note ID (note1...)'
 runs:
-  using: 'node20'
-  main: 'dist/index.js'
+  using: node20
+  main: dist/nip94-publisher.js
