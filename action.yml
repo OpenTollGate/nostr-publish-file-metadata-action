@@ -1,0 +1,15 @@
+name: 'Publish File Metadata (Nostr NIP-94)'
+description: 'Publishes a File Metadata event (Nostr)'
+branding:
+  color: purple
+  icon: upload
+inputs:
+  relays:
+    description: 'The relays to push to'
+    required: true
+outputs:
+  x:
+    description: 'y'
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
