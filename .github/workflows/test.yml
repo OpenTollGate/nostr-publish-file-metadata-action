@@ -19,7 +19,7 @@ jobs:
         id: upload
         uses: c03rad0r/upload-blossom-action@using-nsec-argument
         with:
-          host: ${{ vars.HOST }}
+          host: ${{ secrets.HOST }}
           filePath: testfile.txt
           nostrPrivateKey: ${{ secrets.NSEC }}
 
