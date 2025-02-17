@@ -1,29 +1,35 @@
-name: Test Blossom Upload
-on:
-  push:
-  pull_request:
+name: Test NIP-94 Publishing
+on: [push, pull_request]
 
 jobs:
-  test-upload:
+  test-upload-publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Create test file
+        run: |
+          echo "Nostr file metadata test - $(date)" > testfile.txt
+      
+      - name: Upload to Blossom
+        id: upload
+        uses: ./upload-blossom-action
+        with:
+          host: ${{ vars.HOST || 'https://your.blossom.server' }}
+          filePath: testfile.txt
+          nostrPrivateKey: ${{ secrets.NSEC }}
 
-    - name: Create test file
-      run: |
-        echo "This is a test file for Blossom upload" > test.txt
-        echo "Test file created at: $(pwd)/test.txt"
-
-    - name: Upload to Blossom
-      uses: ./
-      id: blossom-upload
-      with:
-        host: ${{ secrets.HOST }}
-        filePath: test.txt
-        nostrPrivateKey: ${{ secrets.NSEC }}
-
-    - name: Show results
-      run: |
-        echo "Uploaded URL: ${{ steps.blossom-upload.outputs.blossomUrl }}"
-        echo "File hash: ${{ steps.blossom-upload.outputs.blossomHash }}"
+      - name: Publish NIP-94 Metadata
+        uses: ./nostr-publish-file-metadata-action
+        with:
+          relays: wss://relay.damus.io,wss://nos.lol
+          url: ${{ steps.upload.outputs.blossomUrl }}
+          mimeType: text/plain
+          fileHash: ${{ steps.upload.outputs.blossomHash }}
+          content: "Test file uploaded via GitHub Actions"
+          nsec: ${{ secrets.NSEC }}
+          size: ${{ steps.upload.outputs.size }}
