@@ -15,10 +15,12 @@
     "@vercel/ncc": "^0.38.3",
     "blossom-client-sdk": "^2.1.1",
     "file-api": "^0.10.4",
-    "mime": "^4.0.6"
+    "mime": "^4.0.6",
+    "@jsr/nostrify": "^0.37.0"
   },
   "devDependencies": {
-    "typescript": "^5.5.3"
+    "@vercel/ncc": "^0.38.3",
+    "typescript": "^5.0.0"
   },
   "private": true
 }
