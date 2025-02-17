@@ -2,16 +2,10 @@
 import { getInput, setFailed, setOutput } from "@actions/core";
 import { SimplePool, nip19 } from "nostr-tools";
 import { getPublicKey, finalizeEvent } from "nostr-tools/pure";
-import WebSocket from "ws";
-global.WebSocket = WebSocket as typeof WebSocket;
+const WebSocket = require('ws');
 
-// Add type extension for global WebSocket
-declare global {
-  interface Window {
-    WebSocket: typeof WebSocket;
-  }
-  const WebSocket: typeof WebSocket;
-}
+// Simply assign WebSocket to global without type declarations
+(global as any).WebSocket = WebSocket;
 
 // Modify the NIP94Inputs interface
 interface NIP94Inputs {
@@ -23,7 +17,7 @@ interface NIP94Inputs {
   originalHash?: string;
   size?: number;
   dimensions?: string;
-  nsec: Uint8Array; // Changed from string
+  nsec: Uint8Array;
 }
 
 async function publishNIP94Event(inputs: NIP94Inputs) {
