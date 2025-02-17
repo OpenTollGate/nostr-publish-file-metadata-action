@@ -3,6 +3,7 @@ import { getInput, setFailed, setOutput } from "@actions/core";
 import { SimplePool, nip19 } from "nostr-tools";
 import { getPublicKey, finalizeEvent } from "nostr-tools/pure";
 import WebSocket from "ws";
+global.WebSocket = WebSocket as typeof WebSocket;
 
 // Add type extension for global WebSocket
 declare global {
@@ -58,20 +59,29 @@ async function publishNIP94Event(inputs: NIP94Inputs) {
 
 // Update input processing
 try {
+  // Get all required inputs first
+  const relays = getInput("relays").split(",");
+  const url = getInput("url");
+  const mimeType = getInput("mimeType");
+  const fileHash = getInput("fileHash");
+  const content = getInput("content");
+  
+  // Process nsec
   const nsecInput = getInput("nsec");
   const decoded = nip19.decode(nsecInput).data as string;
-  const hexBytes = decoded.startsWith('nsec') ? decoded.slice(4) : decoded;
+  const hexBytes = decoded.startsWith('nsec') ? decoded : decoded.slice(4);
   const nsecBytes = new Uint8Array(
-    (hexBytes.match(/../g) || []).map(byte => parseInt(byte, 16))
+    hexBytes.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16))
   );
 
+  // Construct inputs with proper variable names
   const inputs: NIP94Inputs = {
     relays,
     url,
     mimeType,
     fileHash,
     content,
-    nsec,
+    nsec: nsecBytes,
     originalHash: getInput("originalHash") || undefined,
     size: Number(getInput("size")) || undefined,
     dimensions: getInput("dimensions") || undefined,
