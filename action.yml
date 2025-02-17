@@ -1,15 +1,23 @@
-name: 'Publish File Metadata (Nostr NIP-94)'
-description: 'Publishes a File Metadata event (Nostr)'
+name: 'Blossom File Uploader'
+description: 'Uploads files to a Blossom server with Nostr authentication'
 branding:
   color: purple
   icon: upload
 inputs:
-  relays:
-    description: 'The relays to push to'
+  host:
+    description: 'URL of the Blossom server to upload to (e.g "https://blossom.example.com")'
+    required: true
+  filePath:
+    description: 'Path to the file to upload (relative to repository root)'
+    required: true
+  nostrPrivateKey:
+    description: 'Nostr NSEC private for signing upload authorization'
     required: true
 outputs:
-  x:
-    description: 'y'
+  blossomUrl:
+    description: 'Full URL of the uploaded file on Blossom server'
+  blossomHash:
+    description: 'SHA256 hash of the uploaded file'
 runs:
   using: 'node20'
   main: 'dist/index.js'
