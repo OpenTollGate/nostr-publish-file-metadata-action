@@ -17,7 +17,7 @@ jobs:
       
       - name: Upload to Blossom
         id: upload
-        uses: ./upload-blossom-action
+        uses: c03rad0r/upload-blossom-action@using-nsec-argument
         with:
           host: ${{ vars.HOST || 'https://your.blossom.server' }}
           filePath: testfile.txt
