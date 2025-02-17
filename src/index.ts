@@ -4,8 +4,15 @@ import { SimplePool, nip19 } from "nostr-tools";
 import { getPublicKey, finalizeEvent } from "nostr-tools/pure";
 import WebSocket from "ws";
 
-global.WebSocket = WebSocket;
+// Add type extension for global WebSocket
+declare global {
+  interface Window {
+    WebSocket: typeof WebSocket;
+  }
+  const WebSocket: typeof WebSocket;
+}
 
+// Modify the NIP94Inputs interface
 interface NIP94Inputs {
   relays: string[];
   url: string;
@@ -15,7 +22,7 @@ interface NIP94Inputs {
   originalHash?: string;
   size?: number;
   dimensions?: string;
-  nsec: string;
+  nsec: Uint8Array; // Changed from string
 }
 
 async function publishNIP94Event(inputs: NIP94Inputs) {
@@ -38,13 +45,6 @@ async function publishNIP94Event(inputs: NIP94Inputs) {
     };
 
     const signedEvent = finalizeEvent(eventTemplate, inputs.nsec);
-    
-    await Promise.race([
-      pool.publish(inputs.relays, signedEvent),
-      new Promise((_, reject) =>
-        setTimeout(() => reject("Publish timeout after 30s"), 30000)
-      ),
-    ]);
 
     return {
       eventId: signedEvent.id,
@@ -56,14 +56,15 @@ async function publishNIP94Event(inputs: NIP94Inputs) {
   }
 }
 
+// Update input processing
 try {
-  const relays = getInput("relays").split(",");
-  const url = getInput("url");
-  const mimeType = getInput("mimeType");
-  const fileHash = getInput("fileHash");
-  const content = getInput("content");
-  const nsec = getInput("nsec");
-  
+  const nsecInput = getInput("nsec");
+  const decoded = nip19.decode(nsecInput).data as string;
+  const hexBytes = decoded.startsWith('nsec') ? decoded.slice(4) : decoded;
+  const nsecBytes = new Uint8Array(
+    (hexBytes.match(/../g) || []).map(byte => parseInt(byte, 16))
+  );
+
   const inputs: NIP94Inputs = {
     relays,
     url,
