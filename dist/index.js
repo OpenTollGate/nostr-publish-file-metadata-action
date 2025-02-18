@@ -41664,13 +41664,12 @@ async function publishNIP94Event(inputs) {
 
 async function main() {
   try {
-    const relays = getInput("relays").split(",");
-    const url = getInput("url");
-    const mimeType = getInput("mimeType");
-    const fileHash = getInput("fileHash");
-    const content = getInput("content");
-    
-    const nsecInput = getInput("nsec");
+    const relays = core.getInput("relays").split(",");
+    const url = core.getInput("url");
+    const mimeType = core.getInput("mimeType");
+    const fileHash = core.getInput("fileHash");
+    const content = core.getInput("content");
+    const nsecInput = core.getInput("nsec");
     let nsecBytes;
 
     try {
@@ -41701,6 +41700,10 @@ async function main() {
       throw new Error(`Failed to process nsec: ${error.message}`);
     }
 
+    const originalHash = core.getInput("originalHash");
+    const size = core.getInput("size");
+    const dimensions = core.getInput("dimensions");
+
     const inputs = {
       relays,
       url,
@@ -41708,15 +41711,15 @@ async function main() {
       fileHash,
       content,
       nsec: nsecBytes,
-      originalHash: getInput("originalHash") || undefined,
-      size: Number(getInput("size")) || undefined,
-      dimensions: getInput("dimensions") || undefined,
+      originalHash: core.getInput("originalHash") || undefined,
+      size: Number(core.getInput("size")) || undefined,
+      dimensions: core.getInput("dimensions") || undefined,
     };
 
     const result = await publishNIP94Event(inputs);
     
-    setOutput("eventId", result.eventId);
-    setOutput("noteId", result.noteId);
+    core.setOutput("eventId", result.eventId);
+    core.setOutput("noteId", result.noteId);
     console.log(`Published NIP-94 event: ${result.noteId}`);
     console.log(`View on clients:
 - https://snort.social/e/${result.noteId}
@@ -41725,21 +41728,12 @@ async function main() {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("Action failed:", errorMessage);
-    // setFailed("NIP-94 publication failed");
+    core.setFailed(error.message);
   }
 }
 
-process.on('unhandledRejection', (error) => {
-  console.error('Unhandled promise rejection:', error);
-  setTimeout(() => process.exit(1), 1000);
-});
-
-main().then(() => {
-  setTimeout(() => process.exit(0), 1000);
-}).catch((error) => {
-  console.error("Run failed:", error);
-  setTimeout(() => process.exit(1), 1000);
-});
+// Don't forget to call main()
+main();
 
 module.exports = __webpack_exports__;
 /******/ })()
