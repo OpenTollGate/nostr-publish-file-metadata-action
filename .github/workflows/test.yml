@@ -16,23 +16,28 @@ jobs:
           echo "Nostr file metadata test - $(date)" > testfile.txt
       
       - name: Upload to Blossom
-        id: upload
-        uses: c03rad0r/upload-blossom-action@using-nsec-argument
-        max-attempts: 3
+        uses: nick-fields/retry@v2
         with:
-          host: ${{ secrets.HOST }}
-          filePath: testfile.txt
-          nostrPrivateKey: ${{ secrets.NSEC }}
+          timeout_minutes: 2
+          max_attempts: 3
+          command: |
+            upload_output=$(c03rad0r/upload-blossom-action@using-nsec-argument \
+              --host "${{ secrets.HOST }}" \
+              --filePath "testfile.txt" \
+              --nostrPrivateKey "${{ secrets.NSEC }}")
+            echo "::set-output name=upload_result::$upload_output"
 
       - name: Publish NIP-94 Metadata
-        id: publish
-        uses: ./
-        max-attempts: 3
+        uses: nick-fields/retry@v2
         with:
-          relays: wss://relay.damus.io,wss://nos.lol
-          url: ${{ steps.upload.outputs.blossomUrl }}
-          mimeType: text/plain
-          fileHash: ${{ steps.upload.outputs.blossomHash }}
-          content: "Test file uploaded via GitHub Actions"
-          nsec: ${{ secrets.NSEC }}
-          size: ${{ steps.upload.outputs.size }}
+          timeout_minutes: 2
+          max_attempts: 3
+          command: |
+            ./dist/index.js \
+              --relays "wss://relay.damus.io,wss://nos.lol" \
+              --url "${{ steps.upload.outputs.blossomUrl }}" \
+              --mimeType "text/plain" \
+              --fileHash "${{ steps.upload.outputs.blossomHash }}" \
+              --content "Test file uploaded via GitHub Actions" \
+              --nsec "${{ secrets.NSEC }}" \
+              --size "${{ steps.upload.outputs.size }}"
