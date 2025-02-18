@@ -24,7 +24,7 @@ jobs:
           nostrPrivateKey: ${{ secrets.NSEC }}
 
       - name: Publish NIP-94 Metadata
-        uses: ./nostr-publish-file-metadata-action
+        uses: ./
         with:
           relays: wss://relay.damus.io,wss://nos.lol
           url: ${{ steps.upload.outputs.blossomUrl }}
