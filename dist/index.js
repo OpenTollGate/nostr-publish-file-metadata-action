@@ -32131,7 +32131,7 @@ module.exports = isValidUTF8;
 
 
 try {
-  module.exports = require(__nccwpck_require__.ab + "prebuilds/linux-x64/node.napi.node");
+  module.exports = __nccwpck_require__(5668)(__dirname);
 } catch (e) {
   module.exports = __nccwpck_require__(7531);
 }
@@ -37095,7 +37095,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-// src/nip94-publisher.ts
 const core_1 = __nccwpck_require__(7484);
 const nostr_tools_1 = __nccwpck_require__(510);
 const nostr_tools_2 = __nccwpck_require__(510);
@@ -37119,6 +37118,42 @@ async function publishNIP94Event(inputs) {
             content: inputs.content,
         };
         const signedEvent = (0, nostr_tools_2.finalizeEvent)(eventTemplate, inputs.nsec);
+        console.log(`Publishing to ${inputs.relays.length} relays...`);
+        let publishedCount = 0;
+        const publishPromises = inputs.relays.map((relay) => {
+            return new Promise(async (resolve, reject) => {
+                try {
+                    const pub = pool.publish([relay], signedEvent);
+                    const timeout = setTimeout(() => {
+                        reject(new Error(`Timeout publishing to ${relay}`));
+                    }, 10000);
+                    await Promise.all(pub)
+                        .then(() => {
+                        clearTimeout(timeout);
+                        console.log(`Published to ${relay}`);
+                        publishedCount++;
+                        resolve();
+                    })
+                        .catch((error) => {
+                        clearTimeout(timeout);
+                        console.error(`Failed to publish to ${relay}:`, error);
+                        reject(error);
+                    });
+                }
+                catch (error) {
+                    reject(error instanceof Error ? error : new Error(String(error)));
+                }
+            });
+        });
+        try {
+            await Promise.any(publishPromises);
+        }
+        catch (error) {
+            console.error("Publishing error:", error);
+            if (publishedCount === 0) {
+                throw new Error("Failed to publish to any relay");
+            }
+        }
         return {
             eventId: signedEvent.id,
             noteId: nostr_tools_1.nip19.noteEncode(signedEvent.id),
@@ -37129,79 +37164,71 @@ async function publishNIP94Event(inputs) {
         pool.close(inputs.relays);
     }
 }
-// Update input processing
-try {
-    // Get all required inputs first
-    const relays = (0, core_1.getInput)("relays").split(",");
-    const url = (0, core_1.getInput)("url");
-    const mimeType = (0, core_1.getInput)("mimeType");
-    const fileHash = (0, core_1.getInput)("fileHash");
-    const content = (0, core_1.getInput)("content");
-    // Process nsec
-    const nsecInput = (0, core_1.getInput)("nsec");
-    let nsecBytes;
+async function main() {
     try {
-        if (!nsecInput) {
-            throw new Error("nsec input is required");
-        }
-        // Remove any whitespace
-        const cleanNsec = nsecInput.trim();
-        // Handle different formats
-        if (cleanNsec.startsWith('nsec1')) {
-            // Handle bech32 nsec format
-            const decoded = nostr_tools_1.nip19.decode(cleanNsec);
-            nsecBytes = new Uint8Array(Buffer.from(decoded.data, 'hex'));
-        }
-        else {
-            // Handle hex format
-            // Remove '0x' prefix if present
-            const hexString = cleanNsec.replace('0x', '');
-            // Validate hex string
-            if (!/^[0-9a-fA-F]{64}$/.test(hexString)) {
-                throw new Error("Invalid hex format: must be 64 characters long and contain only hex characters");
+        const relays = (0, core_1.getInput)("relays").split(",");
+        const url = (0, core_1.getInput)("url");
+        const mimeType = (0, core_1.getInput)("mimeType");
+        const fileHash = (0, core_1.getInput)("fileHash");
+        const content = (0, core_1.getInput)("content");
+        const nsecInput = (0, core_1.getInput)("nsec");
+        let nsecBytes;
+        try {
+            if (!nsecInput) {
+                throw new Error("nsec input is required");
             }
-            nsecBytes = new Uint8Array(Buffer.from(hexString, 'hex'));
+            const cleanNsec = nsecInput.trim();
+            if (cleanNsec.startsWith('nsec1')) {
+                const decoded = nostr_tools_1.nip19.decode(cleanNsec);
+                nsecBytes = new Uint8Array(Buffer.from(decoded.data, 'hex'));
+            }
+            else {
+                const hexString = cleanNsec.replace('0x', '');
+                if (!/^[0-9a-fA-F]{64}$/.test(hexString)) {
+                    throw new Error("Invalid hex format: must be 64 characters long and contain only hex characters");
+                }
+                nsecBytes = new Uint8Array(Buffer.from(hexString, 'hex'));
+            }
+            if (nsecBytes.length !== 32) {
+                throw new Error(`Invalid private key length: expected 32 bytes, got ${nsecBytes.length}`);
+            }
         }
-        // Validate the length of the resulting bytes
-        if (nsecBytes.length !== 32) {
-            throw new Error(`Invalid private key length: expected 32 bytes, got ${nsecBytes.length}`);
+        catch (error) {
+            if (error instanceof Error) {
+                throw new Error(`Failed to process nsec: ${error.message}`);
+            }
+            throw error;
         }
-    }
-    catch (error) {
-        if (error instanceof Error) {
-            throw new Error(`Failed to process nsec: ${error.message}`);
-        }
-        throw error;
-    }
-    // Construct inputs with proper variable names
-    const inputs = {
-        relays,
-        url,
-        mimeType,
-        fileHash,
-        content,
-        nsec: nsecBytes,
-        originalHash: (0, core_1.getInput)("originalHash") || undefined,
-        size: Number((0, core_1.getInput)("size")) || undefined,
-        dimensions: (0, core_1.getInput)("dimensions") || undefined,
-    };
-    publishNIP94Event(inputs)
-        .then(result => {
+        const inputs = {
+            relays,
+            url,
+            mimeType,
+            fileHash,
+            content,
+            nsec: nsecBytes,
+            originalHash: (0, core_1.getInput)("originalHash") || undefined,
+            size: Number((0, core_1.getInput)("size")) || undefined,
+            dimensions: (0, core_1.getInput)("dimensions") || undefined,
+        };
+        const result = await publishNIP94Event(inputs);
         (0, core_1.setOutput)("eventId", result.eventId);
         (0, core_1.setOutput)("noteId", result.noteId);
         console.log(`Published NIP-94 event: ${result.noteId}`);
         console.log(`View on clients:
 - https://snort.social/e/${result.noteId}
 - https://primal.net/e/${result.eventId}`);
-    })
-        .catch(err => {
-        throw new Error(`NIP-94 publish failed: ${err}`);
-    });
+    }
+    catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error("Action failed:", errorMessage);
+        (0, core_1.setFailed)("NIP-94 publication failed");
+    }
 }
-catch (error) {
-    console.error("Action failed:", error instanceof Error ? error.message : error);
-    (0, core_1.setFailed)("NIP-94 publication failed");
-}
+// Execute the main function
+main().catch((error) => {
+    console.error("Unhandled error:", error);
+    (0, core_1.setFailed)("Unhandled error in NIP-94 publication");
+});
 
 
 /***/ }),
