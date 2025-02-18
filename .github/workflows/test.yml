@@ -89,7 +89,7 @@ jobs:
         id: publish-retry-1
         uses: ./
         with:
-          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/,wss://orangesync.tech,wss://damus.io,wss://nostr.land
+          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/,wss://orangesync.tech,wss://damus.io
           url: ${{ steps.upload.outputs.blossomUrl }}
           mimeType: text/plain
           fileHash: ${{ steps.upload.outputs.blossomHash }}
@@ -102,7 +102,7 @@ jobs:
         id: publish-retry-2
         uses: ./
         with:
-          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/,wss://orangesync.tech,wss://damus.io,wss://nostr.land
+          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/,wss://orangesync.tech,wss://damus.io
           url: ${{ steps.upload.outputs.blossomUrl }}
           mimeType: text/plain
           fileHash: ${{ steps.upload.outputs.blossomHash }}
