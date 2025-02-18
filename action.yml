@@ -35,4 +35,4 @@ outputs:
     description: 'Bech32-encoded note ID (note1...)'
 runs:
   using: node20
-  main: dist/nip94-publisher.js
+  main: dist/index.js
