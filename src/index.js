@@ -1,7 +1,8 @@
+const core = require('@actions/core');
+const { SimplePool } = require('nostr-tools');
+const { getPublicKey, finalizeEvent } = require('nostr-tools/pure');
 const WebSocket = require('ws');
-const { SimplePool, nip19 } = require("nostr-tools");
-const { finalizeEvent } = require("nostr-tools");
-const { getInput, setFailed, setOutput } = require("@actions/core");
+const { nip19 } = require('nostr-tools');
 
 // Simple WebSocket global assignment
 global.WebSocket = WebSocket;
