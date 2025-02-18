@@ -60,20 +60,41 @@ jobs:
           nostrPrivateKey: ${{ secrets.NSEC }}
 
       - name: Publish NIP-94 Metadata
-        uses: nick-fields/retry@v2
+        continue-on-error: true
+        id: publish
+        uses: ./
         with:
-          timeout_minutes: 2
-          max_attempts: 3
-          retry_wait_seconds: 10
-          polling_interval_seconds: 1
-          warning_on_retry: true
-          continue_on_error: false
-          command: |
-            node dist/index.js \
-              --relays "wss://relay.damus.io,wss://nos.lol" \
-              --url "${{ steps.upload.outputs.blossomUrl }}" \
-              --mimeType "text/plain" \
-              --fileHash "${{ steps.upload.outputs.blossomHash }}" \
-              --content "Test file uploaded via GitHub Actions" \
-              --nsec "${{ secrets.NSEC }}" \
-              --size "${{ steps.upload.outputs.size }}"
+          relays: wss://relay.damus.io,wss://nos.lol
+          url: ${{ steps.upload.outputs.blossomUrl }}
+          mimeType: text/plain
+          fileHash: ${{ steps.upload.outputs.blossomHash }}
+          content: "Test file uploaded via GitHub Actions"
+          nsec: ${{ secrets.NSEC }}
+          size: ${{ steps.upload.outputs.size }}
+
+      - name: Publish NIP-94 Metadata (Retry 1)
+        if: steps.publish.outcome == 'failure'
+        continue-on-error: true
+        id: publish-retry-1
+        uses: ./
+        with:
+          relays: wss://relay.damus.io,wss://nos.lol
+          url: ${{ steps.upload.outputs.blossomUrl }}
+          mimeType: text/plain
+          fileHash: ${{ steps.upload.outputs.blossomHash }}
+          content: "Test file uploaded via GitHub Actions"
+          nsec: ${{ secrets.NSEC }}
+          size: ${{ steps.upload.outputs.size }}
+
+      - name: Publish NIP-94 Metadata (Final Attempt)
+        if: steps.publish-retry-1.outcome == 'failure'
+        id: publish-retry-2
+        uses: ./
+        with:
+          relays: wss://relay.damus.io,wss://nos.lol
+          url: ${{ steps.upload.outputs.blossomUrl }}
+          mimeType: text/plain
+          fileHash: ${{ steps.upload.outputs.blossomHash }}
+          content: "Test file uploaded via GitHub Actions"
+          nsec: ${{ secrets.NSEC }}
+          size: ${{ steps.upload.outputs.size }}
