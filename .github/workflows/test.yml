@@ -32,15 +32,32 @@ jobs:
         run: chmod +x dist/index.js
       
       - name: Upload to Blossom
-        uses: nick-fields/retry@v2
+        id: upload
+        continue-on-error: true
+        uses: c03rad0r/upload-blossom-action@using-nsec-argument
         with:
-          timeout_minutes: 2
-          max_attempts: 3
-          command: |
-            c03rad0r/upload-blossom-action@using-nsec-argument \
-              --host "${{ secrets.HOST }}" \
-              --filePath "testfile.txt" \
-              --nostrPrivateKey "${{ secrets.NSEC }}"
+          host: ${{ secrets.HOST }}
+          filePath: testfile.txt
+          nostrPrivateKey: ${{ secrets.NSEC }}
+
+      - name: Upload to Blossom (Retry 1)
+        id: upload-retry-1
+        if: steps.upload.outcome == 'failure'
+        continue-on-error: true
+        uses: c03rad0r/upload-blossom-action@using-nsec-argument
+        with:
+          host: ${{ secrets.HOST }}
+          filePath: testfile.txt
+          nostrPrivateKey: ${{ secrets.NSEC }}
+
+      - name: Upload to Blossom (Final Attempt)
+        id: upload-retry-2
+        if: steps.upload-retry-1.outcome == 'failure'
+        uses: c03rad0r/upload-blossom-action@using-nsec-argument
+        with:
+          host: ${{ secrets.HOST }}
+          filePath: testfile.txt
+          nostrPrivateKey: ${{ secrets.NSEC }}
 
       - name: Publish NIP-94 Metadata
         uses: nick-fields/retry@v2
