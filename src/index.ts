@@ -2,9 +2,7 @@
 import { getInput, setFailed, setOutput } from "@actions/core";
 import { SimplePool, nip19 } from "nostr-tools";
 import { getPublicKey, finalizeEvent } from "nostr-tools/pure";
-const WebSocket = require('ws');
-
-// Simply assign WebSocket to global without type declarations
+import WebSocket from 'ws';
 (global as any).WebSocket = WebSocket;
 
 // Modify the NIP94Inputs interface
