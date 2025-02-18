@@ -15,7 +15,6 @@ jobs:
         run: |
           echo "Nostr file metadata test - $(date)" > testfile.txt
       
-      # Add step to install dependencies and build
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
@@ -27,10 +26,10 @@ jobs:
       - name: Build
         run: npm run build
 
-      # Add step to make the script executable
       - name: Make script executable
         run: chmod +x dist/index.js
       
+      # Upload steps remain the same
       - name: Upload to Blossom
         id: upload
         continue-on-error: true
@@ -59,9 +58,10 @@ jobs:
           filePath: testfile.txt
           nostrPrivateKey: ${{ secrets.NSEC }}
 
-      - name: Publish NIP-94 Metadata
-        continue-on-error: true
+      # Publish steps with verification
+      - name: Publish and Verify NIP-94 Metadata
         id: publish
+        continue-on-error: true
         uses: ./
         with:
           relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/,wss://orangesync.tech,wss://damus.io,wss://nostr.land
@@ -72,10 +72,21 @@ jobs:
           nsec: ${{ secrets.NSEC }}
           size: ${{ steps.upload.outputs.size }}
 
-      - name: Publish NIP-94 Metadata (Retry 1)
+      - name: Verify Initial Publication
+        if: steps.publish.outputs.eventId
+        env:
+          VERIFY_MODE: 'true'
+          RELAYS: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/,wss://orangesync.tech,wss://damus.io,wss://nostr.land
+          EVENT_ID: ${{ steps.publish.outputs.eventId }}
+          FILE_HASH: ${{ steps.upload.outputs.blossomHash }}
+          EXPECTED_CONTENT: "Test file uploaded via GitHub Actions"
+        run: node dist/index.js
+
+      # First retry with verification
+      - name: Publish and Verify NIP-94 Metadata (Retry 1)
+        id: publish-retry-1
         if: steps.publish.outcome == 'failure'
         continue-on-error: true
-        id: publish-retry-1
         uses: ./
         with:
           relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/,wss://orangesync.tech,wss://damus.io,wss://nostr.land
@@ -86,22 +97,46 @@ jobs:
           nsec: ${{ secrets.NSEC }}
           size: ${{ steps.upload.outputs.size }}
 
-      - name: Publish NIP-94 Metadata (Final Attempt)
-        if: steps.publish-retry-1.outcome == 'failure'
-        id: publish-retry-2
-        uses: ./
-        with:
-          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/,wss://orangesync.tech,wss://damus.io,wss://nostr.land
-          url: ${{ steps.upload.outputs.blossomUrl }}
-          mimeType: text/plain
-          fileHash: ${{ steps.upload.outputs.blossomHash }}
-          content: "Test file uploaded via GitHub Actions"
-          nsec: ${{ secrets.NSEC }}
-          size: ${{ steps.upload.outputs.size }}
-
-      - name: Verify Event
+      - name: Verify Retry 1
+        if: steps.publish-retry-1.outputs.eventId
         env:
-          EVENT_ID: ${{ steps.publish.outputs.eventId }}
-          FILE_HASH: ${{ inputs.fileHash }}
+          VERIFY_MODE: 'true'
+          RELAYS: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/,wss://orangesync.tech,wss://damus.io,wss://nostr.land
+          EVENT_ID: ${{ steps.publish-retry-1.outputs.eventId }}
+          FILE_HASH: ${{ steps.upload.outputs.blossomHash }}
           EXPECTED_CONTENT: "Test file uploaded via GitHub Actions"
-        run: npx ts-node src/nip94-verifier.ts
+        run: node dist/index.js
+
+      # Final attempt with verification
+      - name: Publish and Verify NIP-94 Metadata (Final Attempt)
+        id: publish-retry-2
+        if: steps.publish-retry-1.outcome == 'failure'
+        uses: ./
+        with:
+          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/,wss://orangesync.tech,wss://damus.io,wss://nostr.land
+          url: ${{ steps.upload.outputs.blossomUrl }}
+          mimeType: text/plain
+          fileHash: ${{ steps.upload.outputs.blossomHash }}
+          content: "Test file uploaded via GitHub Actions"
+          nsec: ${{ secrets.NSEC }}
+          size: ${{ steps.upload.outputs.size }}
+
+      - name: Final Verification
+        if: steps.publish-retry-2.outputs.eventId
+        env:
+          VERIFY_MODE: 'true'
+          RELAYS: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/,wss://orangesync.tech,wss://damus.io,wss://nostr.land
+          EVENT_ID: ${{ steps.publish-retry-2.outputs.eventId }}
+          FILE_HASH: ${{ steps.upload.outputs.blossomHash }}
+          EXPECTED_CONTENT: "Test file uploaded via GitHub Actions"
+        run: node dist/index.js
+
+      - name: Check Final Status
+        if: always()
+        run: |
+          if [[ "${{ steps.publish.outcome }}" != "success" && \
+                "${{ steps.publish-retry-1.outcome }}" != "success" && \
+                "${{ steps.publish-retry-2.outcome }}" != "success" ]]; then
+            echo "All publication attempts failed"
+            exit 1
+          fi
