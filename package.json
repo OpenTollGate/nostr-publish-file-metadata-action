@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "ncc build src/index.ts -o dist -e @types/nostr-tools",
+    "build": "ncc build src/index.js -o dist/",
     "prepare": "npm run build"
   },
   "dependencies": {
@@ -20,13 +20,7 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
-    "@types/node": "^22.13.4",
-    "@types/ws": "^8.5.14",
-    "@vercel/ncc": "^0.38.3",
-    "ts-loader": "^9.5.2",
-    "typescript": "^5.7.3",
-    "webpack": "^5.98.0",
-    "webpack-cli": "^6.0.1"
+    "@vercel/ncc": "^0.38.3"
   },
   "private": true,
   "engines": {

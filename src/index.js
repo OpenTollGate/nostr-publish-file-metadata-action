@@ -1,33 +1,16 @@
-// src/index.ts
-import { getInput, setFailed, setOutput } from "@actions/core";
-import { SimplePool, nip19 } from "nostr-tools";
-import { finalizeEvent } from "nostr-tools";
-import WebSocket from 'ws';
+const { getInput, setFailed, setOutput } = require("@actions/core");
+const { SimplePool, nip19 } = require("nostr-tools");
+const { finalizeEvent } = require("nostr-tools");
+const WebSocket = require('ws');
 
-// Add proper type declarations
-declare global {
-  var WebSocket: typeof WebSocket;
-}
-
-// Define proper types for SimplePool
-interface RelayConnection {
-  close?: () => void;
-}
-
-interface ExtendedSimplePool extends SimplePool {
-  _relays?: {
-    [key: string]: RelayConnection;
-  };
-}
-
+// Set up WebSocket globally
 global.WebSocket = WebSocket;
 
-
-async function publishNIP94Event(inputs: NIP94Inputs) {
-  let pool: ExtendedSimplePool | null = null;
+async function publishNIP94Event(inputs) {
+  let pool = null;
   try {
     console.log("Creating SimplePool...");
-    pool = new SimplePool() as ExtendedSimplePool;
+    pool = new SimplePool();
 
     const tags = [
       ["url", inputs.url],
@@ -48,7 +31,6 @@ async function publishNIP94Event(inputs: NIP94Inputs) {
     const signedEvent = finalizeEvent(eventTemplate, inputs.nsec);
     console.log(`Publishing to ${inputs.relays.length} relays...`);
 
-    // Use Promise.race for each relay with timeout
     const results = await Promise.allSettled(
       inputs.relays.map(async (relay) => {
         try {
@@ -67,7 +49,6 @@ async function publishNIP94Event(inputs: NIP94Inputs) {
       })
     );
 
-    // Check if at least one relay succeeded
     const successful = results.filter(r => r.status === 'fulfilled');
     if (successful.length === 0) {
       throw new Error("Failed to publish to any relay");
@@ -84,7 +65,7 @@ async function publishNIP94Event(inputs: NIP94Inputs) {
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         if (pool._relays) {
-          for (const relay of Object.values(pool._relays)) {
+          for (const [_, relay] of Object.entries(pool._relays)) {
             if (relay && typeof relay.close === 'function') {
               await relay.close();
             }
@@ -107,7 +88,7 @@ async function main() {
     const content = getInput("content");
     
     const nsecInput = getInput("nsec");
-    let nsecBytes: Uint8Array;
+    let nsecBytes;
 
     try {
       if (!nsecInput) {
@@ -118,7 +99,7 @@ async function main() {
 
       if (cleanNsec.startsWith('nsec1')) {
         const decoded = nip19.decode(cleanNsec);
-        nsecBytes = new Uint8Array(Buffer.from(decoded.data as string, 'hex'));
+        nsecBytes = new Uint8Array(Buffer.from(decoded.data, 'hex'));
       } else {
         const hexString = cleanNsec.replace('0x', '');
         
@@ -134,13 +115,10 @@ async function main() {
       }
 
     } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(`Failed to process nsec: ${error.message}`);
-      }
-      throw error;
+      throw new Error(`Failed to process nsec: ${error.message}`);
     }
 
-    const inputs: NIP94Inputs = {
+    const inputs = {
       relays,
       url,
       mimeType,
@@ -161,14 +139,13 @@ async function main() {
 - https://snort.social/e/${result.noteId}
 - https://primal.net/e/${result.eventId}`);
 
-  } catch (error: unknown) {
+  } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("Action failed:", errorMessage);
     setFailed("NIP-94 publication failed");
   }
 }
 
-// Add proper process handling
 process.on('unhandledRejection', (error) => {
   console.error('Unhandled promise rejection:', error);
   setTimeout(() => process.exit(1), 1000);
