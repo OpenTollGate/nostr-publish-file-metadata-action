@@ -118,9 +118,7 @@ try {
       setOutput("eventId", result.eventId);
       setOutput("noteId", result.noteId);
       console.log(`Published NIP-94 event: ${result.noteId}`);
-      console.log(`View on clients:
-- https://snort.social/e/${result.noteId}
-- https://primal.net/e/${result.eventId}`);
+      console.log(`NIP-94 events won't render on most clients`);
     })
     .catch(err => {
       throw new Error(`NIP-94 publish failed: ${err}`);

@@ -37139,9 +37139,40 @@ try {
     const content = (0, core_1.getInput)("content");
     // Process nsec
     const nsecInput = (0, core_1.getInput)("nsec");
-    const decoded = nostr_tools_1.nip19.decode(nsecInput).data;
-    const hexBytes = decoded.startsWith('nsec') ? decoded : decoded.slice(4);
-    const nsecBytes = new Uint8Array(hexBytes.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+    let nsecBytes;
+    try {
+        if (!nsecInput) {
+            throw new Error("nsec input is required");
+        }
+        // Remove any whitespace
+        const cleanNsec = nsecInput.trim();
+        // Handle different formats
+        if (cleanNsec.startsWith('nsec1')) {
+            // Handle bech32 nsec format
+            const decoded = nostr_tools_1.nip19.decode(cleanNsec);
+            nsecBytes = new Uint8Array(Buffer.from(decoded.data, 'hex'));
+        }
+        else {
+            // Handle hex format
+            // Remove '0x' prefix if present
+            const hexString = cleanNsec.replace('0x', '');
+            // Validate hex string
+            if (!/^[0-9a-fA-F]{64}$/.test(hexString)) {
+                throw new Error("Invalid hex format: must be 64 characters long and contain only hex characters");
+            }
+            nsecBytes = new Uint8Array(Buffer.from(hexString, 'hex'));
+        }
+        // Validate the length of the resulting bytes
+        if (nsecBytes.length !== 32) {
+            throw new Error(`Invalid private key length: expected 32 bytes, got ${nsecBytes.length}`);
+        }
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            throw new Error(`Failed to process nsec: ${error.message}`);
+        }
+        throw error;
+    }
     // Construct inputs with proper variable names
     const inputs = {
         relays,
@@ -37159,9 +37190,7 @@ try {
         (0, core_1.setOutput)("eventId", result.eventId);
         (0, core_1.setOutput)("noteId", result.noteId);
         console.log(`Published NIP-94 event: ${result.noteId}`);
-        console.log(`View on clients:
-- https://snort.social/e/${result.noteId}
-- https://primal.net/e/${result.eventId}`);
+        console.log(`NIP-94 events won't render on most clients`);
     })
         .catch(err => {
         throw new Error(`NIP-94 publish failed: ${err}`);

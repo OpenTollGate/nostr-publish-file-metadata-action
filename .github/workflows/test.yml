@@ -98,3 +98,10 @@ jobs:
           content: "Test file uploaded via GitHub Actions"
           nsec: ${{ secrets.NSEC }}
           size: ${{ steps.upload.outputs.size }}
+
+      - name: Verify Event
+        env:
+          EVENT_ID: ${{ steps.publish.outputs.eventId }}
+          FILE_HASH: ${{ inputs.fileHash }}
+          EXPECTED_CONTENT: "Test file uploaded via GitHub Actions"
+        run: npx ts-node src/nip94-verifier.ts
