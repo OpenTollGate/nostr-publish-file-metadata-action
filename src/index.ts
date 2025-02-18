@@ -1,7 +1,7 @@
 // src/nip94-publisher.ts
 import { getInput, setFailed, setOutput } from "@actions/core";
 import { SimplePool, nip19 } from "nostr-tools";
-import { getPublicKey, finalizeEvent } from "nostr-tools/pure";
+import { getPublicKey, finalizeEvent } from "nostr-tools";
 import WebSocket from 'ws';
 (global as any).WebSocket = WebSocket;
 

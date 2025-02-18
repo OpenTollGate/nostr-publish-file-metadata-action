@@ -7,7 +7,21 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "baseUrl": ".",
+    "paths": {
+      "nostr-tools/*": ["./node_modules/nostr-tools/*"]  // Updated path mapping
+    },
+    "resolveJsonModule": true,  // Added for JSON imports
+    "declaration": true,  // Generates .d.ts files
+    "sourceMap": true    // Helps with debugging
   },
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src/**/*"    // Explicitly include source files
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }
