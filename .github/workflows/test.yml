@@ -24,6 +24,17 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: |
+          npm install
+          npm install ws
+
       - name: Build
         run: npm run build
 
