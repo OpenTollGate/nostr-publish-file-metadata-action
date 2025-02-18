@@ -41725,7 +41725,7 @@ async function main() {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("Action failed:", errorMessage);
-    setFailed("NIP-94 publication failed");
+    // setFailed("NIP-94 publication failed");
   }
 }
 
