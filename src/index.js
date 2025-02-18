@@ -3,48 +3,14 @@ const { SimplePool, nip19 } = require("nostr-tools");
 const { finalizeEvent } = require("nostr-tools");
 const { getInput, setFailed, setOutput } = require("@actions/core");
 
-// Force JavaScript implementation of WebSocket masking
-WebSocket.createWebSocketStream = undefined; // Disable native dependencies
-
-// With this direct implementation override
-const WS_Sender = require('./ws/lib/sender.js');
-WebSocket.Sender = class CustomSender extends WS_Sender {
-  constructor(websocket) {
-    super(websocket);
-    this._mask = this._randomMask; // Force JavaScript masking
-  }
-  
-  _randomMask() {
-    return Buffer.from([Math.random()*255, Math.random()*255, Math.random()*255, Math.random()*255]);
-  }
-};
-
-// Configure WebSocket options
-const wsOptions = {
-  perMessageDeflate: false,
-  skipUTF8Validation: true,
-  maxPayload: 100 * 1024 * 1024 // 100MB
-};
-
-global.WebSocket = class ConfiguredWebSocket extends WebSocket {
-  constructor(url) {
-    super(url, wsOptions);
-  }
-};
+// Simple WebSocket global assignment
+global.WebSocket = WebSocket;
 
 async function publishNIP94Event(inputs) {
   let pool = null;
   try {
     console.log("Creating SimplePool...");
-    pool = new SimplePool({
-      getWebSocket: (url) => {
-        const ws = new WebSocket(url, wsOptions);
-        ws.onerror = (error) => {
-          console.error(`WebSocket error for ${url}:`, error);
-        };
-        return ws;
-      }
-    });
+    pool = new SimplePool();
 
     const tags = [
       ["url", inputs.url],

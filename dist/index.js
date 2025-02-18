@@ -37086,14 +37086,6 @@ function socketOnError() {
 
 /***/ }),
 
-/***/ 93:
-/***/ ((module) => {
-
-module.exports = eval("require")("./ws/lib/sender.js");
-
-
-/***/ }),
-
 /***/ 2613:
 /***/ ((module) => {
 
@@ -41449,48 +41441,14 @@ const { SimplePool, nip19 } = __nccwpck_require__(510);
 const { finalizeEvent } = __nccwpck_require__(510);
 const { getInput, setFailed, setOutput } = __nccwpck_require__(7484);
 
-// Force JavaScript implementation of WebSocket masking
-src_WebSocket.createWebSocketStream = undefined; // Disable native dependencies
-
-// With this direct implementation override
-const WS_Sender = __nccwpck_require__(93);
-src_WebSocket.Sender = class CustomSender extends WS_Sender {
-  constructor(websocket) {
-    super(websocket);
-    this._mask = this._randomMask; // Force JavaScript masking
-  }
-  
-  _randomMask() {
-    return Buffer.from([Math.random()*255, Math.random()*255, Math.random()*255, Math.random()*255]);
-  }
-};
-
-// Configure WebSocket options
-const wsOptions = {
-  perMessageDeflate: false,
-  skipUTF8Validation: true,
-  maxPayload: 100 * 1024 * 1024 // 100MB
-};
-
-global.WebSocket = class ConfiguredWebSocket extends src_WebSocket {
-  constructor(url) {
-    super(url, wsOptions);
-  }
-};
+// Simple WebSocket global assignment
+global.WebSocket = src_WebSocket;
 
 async function publishNIP94Event(inputs) {
   let pool = null;
   try {
     console.log("Creating SimplePool...");
-    pool = new SimplePool({
-      getWebSocket: (url) => {
-        const ws = new src_WebSocket(url, wsOptions);
-        ws.onerror = (error) => {
-          console.error(`WebSocket error for ${url}:`, error);
-        };
-        return ws;
-      }
-    });
+    pool = new SimplePool();
 
     const tags = [
       ["url", inputs.url],
