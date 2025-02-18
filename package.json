@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "build": "ncc build src/index.js -o dist/ --external bufferutil --external utf-8-validate"
+    "build": "ncc build src/index.js -o dist/ --external bufferutil --external utf-8-validate",
     "prepare": "npm run build"
   },
   "dependencies": {

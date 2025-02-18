@@ -7,7 +7,7 @@ const { getInput, setFailed, setOutput } = require("@actions/core");
 WebSocket.createWebSocketStream = undefined; // Disable native dependencies
 
 // With this direct implementation override
-const WS_Sender = require('ws/lib/sender.js');
+const WS_Sender = require('./ws/lib/sender.js');
 WebSocket.Sender = class CustomSender extends WS_Sender {
   constructor(websocket) {
     super(websocket);
