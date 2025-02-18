@@ -5,7 +5,19 @@ const { getInput, setFailed, setOutput } = require("@actions/core");
 
 // Force JavaScript implementation of WebSocket masking
 WebSocket.createWebSocketStream = undefined; // Disable native dependencies
-WebSocket.Sender = require('ws/lib/sender.js'); // Use pure JS implementation
+
+// With this direct implementation override
+const WS_Sender = require('ws/lib/sender.js');
+WebSocket.Sender = class CustomSender extends WS_Sender {
+  constructor(websocket) {
+    super(websocket);
+    this._mask = this._randomMask; // Force JavaScript masking
+  }
+  
+  _randomMask() {
+    return Buffer.from([Math.random()*255, Math.random()*255, Math.random()*255, Math.random()*255]);
+  }
+};
 
 // Configure WebSocket options
 const wsOptions = {

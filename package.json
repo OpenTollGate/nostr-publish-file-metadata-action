@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "build": "ncc build src/index.js -o dist/",
+    "build": "ncc build src/index.js -o dist/ --external bufferutil --external utf-8-validate"
     "prepare": "npm run build"
   },
   "dependencies": {
@@ -22,5 +22,8 @@
   "private": true,
   "engines": {
     "node": ">=20.0.0"
+  },
+  "resolutions": {
+    "ws/lib/sender.js": "./node_modules/ws/lib/sender.js"
   }
 }
