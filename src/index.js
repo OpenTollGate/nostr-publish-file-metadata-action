@@ -18,7 +18,21 @@ async function publishNIP94Event(inputs) {
   let pool = null;
   try {
     console.log("Creating SimplePool...");
-    pool = new SimplePool();
+    pool = new SimplePool({
+      eoseSubTimeout: 10000,
+      getTimeout: 10000,
+    });
+
+    // Verify relay connections first
+    console.log("Verifying relay connections...");
+    for (const relay of inputs.relays) {
+      try {
+        await pool.ensureRelay(relay);
+        console.log(`Connected to ${relay}`);
+      } catch (error) {
+        console.error(`Failed to connect to ${relay}:`, error);
+      }
+    }
 
     const tags = [
       ["url", inputs.url],
@@ -37,21 +51,31 @@ async function publishNIP94Event(inputs) {
     };
 
     const signedEvent = finalizeEvent(eventTemplate, inputs.nsec);
+    console.log("Event created:", {
+      id: signedEvent.id,
+      kind: signedEvent.kind,
+      created_at: signedEvent.created_at,
+      tagCount: signedEvent.tags.length
+    });
+
     console.log(`Publishing to ${inputs.relays.length} relays...`);
 
     const results = await Promise.allSettled(
       inputs.relays.map(async (relay) => {
         try {
-          await Promise.race([
-            pool.publish([relay], signedEvent),
+          const pub = await Promise.race([
+            pool.publish([relay], signedEvent).catch(e => {
+              console.error(`Internal publish error for ${relay}:`, e);
+              throw e;
+            }),
             new Promise((_, reject) => 
               setTimeout(() => reject(new Error(`Publication timeout for ${relay}`)), 30000)
             )
           ]);
-          console.log(`Published to ${relay}`);
+          console.log(`Published to ${relay}`, pub);
           return relay;
         } catch (error) {
-          console.error(`Failed to publish to ${relay}:`, error.message);
+          console.error(`Failed to publish to ${relay}:`, error);
           throw error;
         }
       })
@@ -62,20 +86,31 @@ async function publishNIP94Event(inputs) {
       throw new Error("Failed to publish to any relay");
     }
 
+    console.log(`Successfully published to ${successful.length} relays`);
+
     return {
       eventId: signedEvent.id,
       noteId: nip19.noteEncode(signedEvent.id),
       rawEvent: signedEvent,
     };
+  } catch (error) {
+    console.error("Error in publishNIP94Event:", error);
+    throw error;
   } finally {
     if (pool) {
       try {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Increased delay to ensure all operations complete
+        await new Promise(resolve => setTimeout(resolve, 3000));
         
         if (pool._relays) {
           for (const [_, relay] of Object.entries(pool._relays)) {
             if (relay && typeof relay.close === 'function') {
-              await relay.close();
+              try {
+                await relay.close();
+                console.log(`Closed connection to relay`);
+              } catch (closeError) {
+                console.error(`Error closing relay connection:`, closeError);
+              }
             }
           }
         }
@@ -89,6 +124,7 @@ async function publishNIP94Event(inputs) {
 
 async function main() {
   try {
+    console.log("Starting main function...");
     const relays = core.getInput("relays").split(",");
     const url = core.getInput("url");
     const mimeType = core.getInput("mimeType");
@@ -97,6 +133,7 @@ async function main() {
     const nsecInput = core.getInput("nsec");
     let nsecBytes;
 
+    console.log("Validating inputs...");
     try {
       if (!nsecInput) {
         throw new Error("nsec input is required");
@@ -105,9 +142,11 @@ async function main() {
       const cleanNsec = nsecInput.trim();
 
       if (cleanNsec.startsWith('nsec1')) {
+        console.log("Processing bech32 nsec...");
         const decoded = nip19.decode(cleanNsec);
         nsecBytes = new Uint8Array(Buffer.from(decoded.data, 'hex'));
       } else {
+        console.log("Processing hex nsec...");
         const hexString = cleanNsec.replace('0x', '');
         
         if (!/^[0-9a-fA-F]{64}$/.test(hexString)) {
@@ -141,6 +180,7 @@ async function main() {
       dimensions: core.getInput("dimensions") || undefined,
     };
 
+    console.log("Publishing event...");
     const result = await publishNIP94Event(inputs);
     
     core.setOutput("eventId", result.eventId);
@@ -157,5 +197,8 @@ async function main() {
   }
 }
 
-// Don't forget to call main()
-main();
+main().catch(error => {
+  console.error("Unhandled error in main:", error);
+  core.setFailed(error.message);
+  process.exit(1);
+});
