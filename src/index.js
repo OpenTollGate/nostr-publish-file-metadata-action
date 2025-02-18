@@ -3,17 +3,20 @@ const { SimplePool, nip19 } = require("nostr-tools");
 const { finalizeEvent } = require("nostr-tools");
 const { getInput, setFailed, setOutput } = require("@actions/core");
 
-// Configure WebSocket with explicit options
+// Force JavaScript implementation of WebSocket masking
+WebSocket.createWebSocketStream = undefined; // Disable native dependencies
+WebSocket.Sender = require('ws/lib/sender.js'); // Use pure JS implementation
+
+// Configure WebSocket options
 const wsOptions = {
   perMessageDeflate: false,
-  maxPayload: 100 * 1024 * 1024,
-  skipUTF8Validation: true
+  skipUTF8Validation: true,
+  maxPayload: 100 * 1024 * 1024 // 100MB
 };
 
-// Set up WebSocket globally with proper configuration
-global.WebSocket = class extends WebSocket {
-  constructor(address, protocols) {
-    super(address, protocols, wsOptions);
+global.WebSocket = class ConfiguredWebSocket extends WebSocket {
+  constructor(url) {
+    super(url, wsOptions);
   }
 };
 
