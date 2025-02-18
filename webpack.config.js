@@ -2,26 +2,30 @@
 const path = require('path');
 
 module.exports = {
+  mode: 'production',
   target: 'node',
   entry: './src/index.ts',
   module: {
     rules: [
       {
-        test: /\.ts$/,
+        test: /\.tsx?$/,
         use: 'ts-loader',
         exclude: /node_modules/,
       },
     ],
   },
   resolve: {
-    extensions: ['.ts', '.js'],
+    extensions: ['.tsx', '.ts', '.js'],
+    fallback: {
+      "ws": false
+    }
   },
   output: {
     filename: 'index.js',
     path: path.resolve(__dirname, 'dist'),
-    libraryTarget: 'commonjs2'
   },
+  externalsPresets: { node: true },
   externals: {
-    'ws': 'commonjs2 ws',
+    'ws': 'commonjs2 ws'
   }
 };
