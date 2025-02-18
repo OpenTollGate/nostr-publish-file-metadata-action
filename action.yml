@@ -1,15 +1,38 @@
-name: 'Publish File Metadata (Nostr NIP-94)'
-description: 'Publishes a File Metadata event (Nostr)'
-branding:
-  color: purple
-  icon: upload
+name: 'NIP-94 Metadata Publisher'
+description: 'Publishes NIP-94 file metadata events to Nostr'
 inputs:
   relays:
-    description: 'The relays to push to'
+    description: 'Comma-separated list of Nostr relays'
     required: true
+  url:
+    description: 'File URL from Blossom upload'
+    required: true
+  mimeType:
+    description: 'MIME type of the file'
+    required: true
+  fileHash:
+    description: 'SHA256 hash of uploaded file'
+    required: true
+  content:
+    description: 'Human-readable description of file contents'
+    required: true
+  nsec:
+    description: 'Nostr nsec for signing'
+    required: true
+  originalHash:
+    description: 'Original file hash before transformations (optional)'
+    required: false
+  size:
+    description: 'File size in bytes (optional)'
+    required: false
+  dimensions:
+    description: 'Image/video dimensions in WxH format (optional)'
+    required: false
 outputs:
-  x:
-    description: 'y'
+  eventId:
+    description: 'Raw Nostr event ID'
+  noteId:
+    description: 'Bech32-encoded note ID (note1...)'
 runs:
-  using: 'node20'
-  main: 'dist/index.js'
+  using: node20
+  main: dist/index.js

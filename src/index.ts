@@ -1,61 +1,131 @@
-import {getInput, setFailed, setOutput} from "@actions/core"
-import {readFileSync} from 'fs';
-import {NDKPrivateKeySigner, NostrEvent} from "@nostr-dev-kit/ndk";
-import {BlossomClient, EventTemplate, SignedEvent} from "blossom-client-sdk";
-import mime from "mime";
+// src/nip94-publisher.ts
+import { getInput, setFailed, setOutput } from "@actions/core";
+import { SimplePool, nip19 } from "nostr-tools";
+import { getPublicKey, finalizeEvent } from "nostr-tools";
+import WebSocket from 'ws';
+(global as any).WebSocket = WebSocket;
 
-console.log('Starting blossom Upload');
-
-async function upload(filePath: string, host: string, nostrPrivateKey: string): Promise<void> {
-    const data = readFileSync(filePath, 'utf-8');
-
-    const fileType = mime.getType(filePath);
-    const blob = new Blob([data], {type: fileType?.toString()});
-
-    async function signer(event: EventTemplate): Promise<SignedEvent> {
-        const signer = new NDKPrivateKeySigner(nostrPrivateKey);
-        const pubkey = await signer.user().then(u => u.pubkey)
-
-        const signature =  await signer.sign(event as NostrEvent);
-
-        const y = event as NostrEvent
-        return {...event, pubkey: pubkey, sig: signature, id: y.id!};
-    }
-
-    const client = new BlossomClient(host, signer);
-    const uploadAuthEvent = await client.createUploadAuth(blob, 'Upload file')
-    const result = await client.uploadBlob(blob, {auth: uploadAuthEvent})
-
-    setOutput("blossomUrl", result.url);
-    setOutput("blossomHash", result.sha256);
-    console.log(`Blob uploaded!, ${result.url}`);
+// Modify the NIP94Inputs interface
+interface NIP94Inputs {
+  relays: string[];
+  url: string;
+  mimeType: string;
+  fileHash: string;
+  content: string;
+  originalHash?: string;
+  size?: number;
+  dimensions?: string;
+  nsec: Uint8Array;
 }
 
+async function publishNIP94Event(inputs: NIP94Inputs) {
+  const pool = new SimplePool();
+  try {
+    const tags = [
+      ["url", inputs.url],
+      ["m", inputs.mimeType],
+      ["x", inputs.fileHash],
+      ...(inputs.originalHash ? [["ox", inputs.originalHash]] : []),
+      ...(inputs.size ? [["size", inputs.size.toString()]] : []),
+      ...(inputs.dimensions ? [["dim", inputs.dimensions]] : []),
+    ];
+
+    const eventTemplate = {
+      kind: 1063,
+      created_at: Math.floor(Date.now() / 1000),
+      tags,
+      content: inputs.content,
+    };
+
+    const signedEvent = finalizeEvent(eventTemplate, inputs.nsec);
+
+    return {
+      eventId: signedEvent.id,
+      noteId: nip19.noteEncode(signedEvent.id),
+      rawEvent: signedEvent,
+    };
+  } finally {
+    pool.close(inputs.relays);
+  }
+}
+
+// Update input processing
 try {
-    // Fetch the value of the input 'who-to-greet' specified in action.yml
-    const host = getInput('host');
-    const filePath = getInput('filePath');
-    const nostrPrivateKey = getInput('nostrPrivateKey');
+  // Get all required inputs first
+  const relays = getInput("relays").split(",");
+  const url = getInput("url");
+  const mimeType = getInput("mimeType");
+  const fileHash = getInput("fileHash");
+  const content = getInput("content");
+  
+// Process nsec
+const nsecInput = getInput("nsec");
+let nsecBytes: Uint8Array;
 
-    console.log(`Uploading file '${filePath}' to host: '${host}'!`);
+try {
+  if (!nsecInput) {
+    throw new Error("nsec input is required");
+  }
 
-    upload(filePath, host, nostrPrivateKey)
-        .catch((error) => {
-            console.error("Blossom Upload failed with error", error);
+  // Remove any whitespace
+  const cleanNsec = nsecInput.trim();
 
-            if(error instanceof Error) {
-                setFailed(error.message);
-            } else{
-                setFailed("unexpected error");
-            }
-        })
+  // Handle different formats
+  if (cleanNsec.startsWith('nsec1')) {
+    // Handle bech32 nsec format
+    const decoded = nip19.decode(cleanNsec);
+    nsecBytes = new Uint8Array(Buffer.from(decoded.data as string, 'hex'));
+  } else {
+    // Handle hex format
+    // Remove '0x' prefix if present
+    const hexString = cleanNsec.replace('0x', '');
+    
+    // Validate hex string
+    if (!/^[0-9a-fA-F]{64}$/.test(hexString)) {
+      throw new Error("Invalid hex format: must be 64 characters long and contain only hex characters");
+    }
+    
+    nsecBytes = new Uint8Array(Buffer.from(hexString, 'hex'));
+  }
+
+  // Validate the length of the resulting bytes
+  if (nsecBytes.length !== 32) {
+    throw new Error(`Invalid private key length: expected 32 bytes, got ${nsecBytes.length}`);
+  }
 
 } catch (error) {
-    console.error("Blossom Upload failed with error", error);
+  if (error instanceof Error) {
+    throw new Error(`Failed to process nsec: ${error.message}`);
+  }
+  throw error;
+}
 
-    if(error instanceof Error) {
-        setFailed(error.message);
-    } else{
-        setFailed("unexpected error");
-    }
+  // Construct inputs with proper variable names
+  const inputs: NIP94Inputs = {
+    relays,
+    url,
+    mimeType,
+    fileHash,
+    content,
+    nsec: nsecBytes,
+    originalHash: getInput("originalHash") || undefined,
+    size: Number(getInput("size")) || undefined,
+    dimensions: getInput("dimensions") || undefined,
+  };
+
+  publishNIP94Event(inputs)
+    .then(result => {
+      setOutput("eventId", result.eventId);
+      setOutput("noteId", result.noteId);
+      console.log(`Published NIP-94 event: ${result.noteId}`);
+      console.log(`View on clients:
+- https://snort.social/e/${result.noteId}
+- https://primal.net/e/${result.eventId}`);
+    })
+    .catch(err => {
+      throw new Error(`NIP-94 publish failed: ${err}`);
+    });
+} catch (error) {
+  console.error("Action failed:", error instanceof Error ? error.message : error);
+  setFailed("NIP-94 publication failed");
 }
