@@ -12,7 +12,8 @@
     "baseUrl": ".",
     "lib": ["ES2021", "DOM"],
     "paths": {
-      "nostr-tools/*": ["./node_modules/nostr-tools/*"]
+      "nostr-tools/*": ["./node_modules/nostr-tools/*"],
+    "types": ["node", "ws"]
     },
     "resolveJsonModule": true,
     "declaration": true,
