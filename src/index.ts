@@ -3,7 +3,19 @@ import { getInput, setFailed, setOutput } from "@actions/core";
 import { SimplePool, nip19, Event } from "nostr-tools";
 import { getPublicKey, finalizeEvent } from "nostr-tools";
 import WebSocket from 'ws';
-(global as any).WebSocket = WebSocket;
+import * as bufferUtil from 'bufferutil';
+import * as utf8Validate from 'utf-8-validate';
+
+// Configure WebSocket with the required utilities
+(global as any).WebSocket = class extends WebSocket {
+  constructor(address: string, protocols?: string | string[]) {
+    super(address, protocols);
+    // @ts-ignore
+    this.binaryType = 'nodebuffer';
+  }
+};
+(global as any).WebSocket.prototype.bufferUtil = bufferUtil;
+(global as any).WebSocket.prototype.utf8Validate = utf8Validate;
 
 // Interfaces
 interface NIP94Inputs {
