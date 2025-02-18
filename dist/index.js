@@ -37086,153 +37086,6 @@ function socketOnError() {
 
 /***/ }),
 
-/***/ 9407:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const core_1 = __nccwpck_require__(7484);
-const nostr_tools_1 = __nccwpck_require__(510);
-const nostr_tools_2 = __nccwpck_require__(510);
-const ws_1 = __importDefault(__nccwpck_require__(1354));
-global.WebSocket = ws_1.default;
-async function publishNIP94Event(inputs) {
-    const pool = new nostr_tools_1.SimplePool();
-    try {
-        const tags = [
-            ["url", inputs.url],
-            ["m", inputs.mimeType],
-            ["x", inputs.fileHash],
-            ...(inputs.originalHash ? [["ox", inputs.originalHash]] : []),
-            ...(inputs.size ? [["size", inputs.size.toString()]] : []),
-            ...(inputs.dimensions ? [["dim", inputs.dimensions]] : []),
-        ];
-        const eventTemplate = {
-            kind: 1063,
-            created_at: Math.floor(Date.now() / 1000),
-            tags,
-            content: inputs.content,
-        };
-        const signedEvent = (0, nostr_tools_2.finalizeEvent)(eventTemplate, inputs.nsec);
-        console.log(`Publishing to ${inputs.relays.length} relays...`);
-        let publishedCount = 0;
-        const publishPromises = inputs.relays.map((relay) => {
-            return new Promise(async (resolve, reject) => {
-                try {
-                    const pub = pool.publish([relay], signedEvent);
-                    const timeout = setTimeout(() => {
-                        reject(new Error(`Timeout publishing to ${relay}`));
-                    }, 10000);
-                    await Promise.all(pub)
-                        .then(() => {
-                        clearTimeout(timeout);
-                        console.log(`Published to ${relay}`);
-                        publishedCount++;
-                        resolve();
-                    })
-                        .catch((error) => {
-                        clearTimeout(timeout);
-                        console.error(`Failed to publish to ${relay}:`, error);
-                        reject(error);
-                    });
-                }
-                catch (error) {
-                    reject(error instanceof Error ? error : new Error(String(error)));
-                }
-            });
-        });
-        try {
-            await Promise.any(publishPromises);
-        }
-        catch (error) {
-            console.error("Publishing error:", error);
-            if (publishedCount === 0) {
-                throw new Error("Failed to publish to any relay");
-            }
-        }
-        return {
-            eventId: signedEvent.id,
-            noteId: nostr_tools_1.nip19.noteEncode(signedEvent.id),
-            rawEvent: signedEvent,
-        };
-    }
-    finally {
-        pool.close(inputs.relays);
-    }
-}
-async function main() {
-    try {
-        const relays = (0, core_1.getInput)("relays").split(",");
-        const url = (0, core_1.getInput)("url");
-        const mimeType = (0, core_1.getInput)("mimeType");
-        const fileHash = (0, core_1.getInput)("fileHash");
-        const content = (0, core_1.getInput)("content");
-        const nsecInput = (0, core_1.getInput)("nsec");
-        let nsecBytes;
-        try {
-            if (!nsecInput) {
-                throw new Error("nsec input is required");
-            }
-            const cleanNsec = nsecInput.trim();
-            if (cleanNsec.startsWith('nsec1')) {
-                const decoded = nostr_tools_1.nip19.decode(cleanNsec);
-                nsecBytes = new Uint8Array(Buffer.from(decoded.data, 'hex'));
-            }
-            else {
-                const hexString = cleanNsec.replace('0x', '');
-                if (!/^[0-9a-fA-F]{64}$/.test(hexString)) {
-                    throw new Error("Invalid hex format: must be 64 characters long and contain only hex characters");
-                }
-                nsecBytes = new Uint8Array(Buffer.from(hexString, 'hex'));
-            }
-            if (nsecBytes.length !== 32) {
-                throw new Error(`Invalid private key length: expected 32 bytes, got ${nsecBytes.length}`);
-            }
-        }
-        catch (error) {
-            if (error instanceof Error) {
-                throw new Error(`Failed to process nsec: ${error.message}`);
-            }
-            throw error;
-        }
-        const inputs = {
-            relays,
-            url,
-            mimeType,
-            fileHash,
-            content,
-            nsec: nsecBytes,
-            originalHash: (0, core_1.getInput)("originalHash") || undefined,
-            size: Number((0, core_1.getInput)("size")) || undefined,
-            dimensions: (0, core_1.getInput)("dimensions") || undefined,
-        };
-        const result = await publishNIP94Event(inputs);
-        (0, core_1.setOutput)("eventId", result.eventId);
-        (0, core_1.setOutput)("noteId", result.noteId);
-        console.log(`Published NIP-94 event: ${result.noteId}`);
-        console.log(`View on clients:
-- https://snort.social/e/${result.noteId}
-- https://primal.net/e/${result.eventId}`);
-    }
-    catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error("Action failed:", errorMessage);
-        (0, core_1.setFailed)("NIP-94 publication failed");
-    }
-}
-// Execute the main function
-main().catch((error) => {
-    console.error("Unhandled error:", error);
-    (0, core_1.setFailed)("Unhandled error in NIP-94 publication");
-});
-
-
-/***/ }),
-
 /***/ 2613:
 /***/ ((module) => {
 
@@ -41582,12 +41435,167 @@ async function validateEvent2(event, url, method, body) {
 /******/ 	if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = __dirname + "/";
 /******/ 	
 /************************************************************************/
-/******/ 	
-/******/ 	// startup
-/******/ 	// Load entry module and return exports
-/******/ 	// This entry module is referenced by other modules so it can't be inlined
-/******/ 	var __webpack_exports__ = __nccwpck_require__(9407);
-/******/ 	module.exports = __webpack_exports__;
-/******/ 	
+var __webpack_exports__ = {};
+const { getInput, setFailed, setOutput } = __nccwpck_require__(7484);
+const { SimplePool, nip19 } = __nccwpck_require__(510);
+const { finalizeEvent } = __nccwpck_require__(510);
+const src_WebSocket = __nccwpck_require__(1354);
+
+// Set up WebSocket globally
+global.WebSocket = src_WebSocket;
+
+async function publishNIP94Event(inputs) {
+  let pool = null;
+  try {
+    console.log("Creating SimplePool...");
+    pool = new SimplePool();
+
+    const tags = [
+      ["url", inputs.url],
+      ["m", inputs.mimeType],
+      ["x", inputs.fileHash],
+      ...(inputs.originalHash ? [["ox", inputs.originalHash]] : []),
+      ...(inputs.size ? [["size", inputs.size.toString()]] : []),
+      ...(inputs.dimensions ? [["dim", inputs.dimensions]] : []),
+    ];
+
+    const eventTemplate = {
+      kind: 1063,
+      created_at: Math.floor(Date.now() / 1000),
+      tags,
+      content: inputs.content,
+    };
+
+    const signedEvent = finalizeEvent(eventTemplate, inputs.nsec);
+    console.log(`Publishing to ${inputs.relays.length} relays...`);
+
+    const results = await Promise.allSettled(
+      inputs.relays.map(async (relay) => {
+        try {
+          await Promise.race([
+            pool.publish([relay], signedEvent),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error(`Publication timeout for ${relay}`)), 30000)
+            )
+          ]);
+          console.log(`Published to ${relay}`);
+          return relay;
+        } catch (error) {
+          console.error(`Failed to publish to ${relay}:`, error.message);
+          throw error;
+        }
+      })
+    );
+
+    const successful = results.filter(r => r.status === 'fulfilled');
+    if (successful.length === 0) {
+      throw new Error("Failed to publish to any relay");
+    }
+
+    return {
+      eventId: signedEvent.id,
+      noteId: nip19.noteEncode(signedEvent.id),
+      rawEvent: signedEvent,
+    };
+  } finally {
+    if (pool) {
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        if (pool._relays) {
+          for (const [_, relay] of Object.entries(pool._relays)) {
+            if (relay && typeof relay.close === 'function') {
+              await relay.close();
+            }
+          }
+        }
+        console.log("Pool cleaned up successfully");
+      } catch (closeError) {
+        console.error("Error during cleanup:", closeError);
+      }
+    }
+  }
+}
+
+async function main() {
+  try {
+    const relays = getInput("relays").split(",");
+    const url = getInput("url");
+    const mimeType = getInput("mimeType");
+    const fileHash = getInput("fileHash");
+    const content = getInput("content");
+    
+    const nsecInput = getInput("nsec");
+    let nsecBytes;
+
+    try {
+      if (!nsecInput) {
+        throw new Error("nsec input is required");
+      }
+
+      const cleanNsec = nsecInput.trim();
+
+      if (cleanNsec.startsWith('nsec1')) {
+        const decoded = nip19.decode(cleanNsec);
+        nsecBytes = new Uint8Array(Buffer.from(decoded.data, 'hex'));
+      } else {
+        const hexString = cleanNsec.replace('0x', '');
+        
+        if (!/^[0-9a-fA-F]{64}$/.test(hexString)) {
+          throw new Error("Invalid hex format: must be 64 characters long and contain only hex characters");
+        }
+        
+        nsecBytes = new Uint8Array(Buffer.from(hexString, 'hex'));
+      }
+
+      if (nsecBytes.length !== 32) {
+        throw new Error(`Invalid private key length: expected 32 bytes, got ${nsecBytes.length}`);
+      }
+
+    } catch (error) {
+      throw new Error(`Failed to process nsec: ${error.message}`);
+    }
+
+    const inputs = {
+      relays,
+      url,
+      mimeType,
+      fileHash,
+      content,
+      nsec: nsecBytes,
+      originalHash: getInput("originalHash") || undefined,
+      size: Number(getInput("size")) || undefined,
+      dimensions: getInput("dimensions") || undefined,
+    };
+
+    const result = await publishNIP94Event(inputs);
+    
+    setOutput("eventId", result.eventId);
+    setOutput("noteId", result.noteId);
+    console.log(`Published NIP-94 event: ${result.noteId}`);
+    console.log(`View on clients:
+- https://snort.social/e/${result.noteId}
+- https://primal.net/e/${result.eventId}`);
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("Action failed:", errorMessage);
+    setFailed("NIP-94 publication failed");
+  }
+}
+
+process.on('unhandledRejection', (error) => {
+  console.error('Unhandled promise rejection:', error);
+  setTimeout(() => process.exit(1), 1000);
+});
+
+main().then(() => {
+  setTimeout(() => process.exit(0), 1000);
+}).catch((error) => {
+  console.error("Run failed:", error);
+  setTimeout(() => process.exit(1), 1000);
+});
+
+module.exports = __webpack_exports__;
 /******/ })()
 ;
