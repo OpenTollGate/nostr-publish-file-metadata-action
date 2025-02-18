@@ -1,16 +1,35 @@
-const { getInput, setFailed, setOutput } = require("@actions/core");
+const WebSocket = require('ws');
 const { SimplePool, nip19 } = require("nostr-tools");
 const { finalizeEvent } = require("nostr-tools");
-const WebSocket = require('ws');
+const { getInput, setFailed, setOutput } = require("@actions/core");
 
-// Set up WebSocket globally
-global.WebSocket = WebSocket;
+// Configure WebSocket with explicit options
+const wsOptions = {
+  perMessageDeflate: false,
+  maxPayload: 100 * 1024 * 1024,
+  skipUTF8Validation: true
+};
+
+// Set up WebSocket globally with proper configuration
+global.WebSocket = class extends WebSocket {
+  constructor(address, protocols) {
+    super(address, protocols, wsOptions);
+  }
+};
 
 async function publishNIP94Event(inputs) {
   let pool = null;
   try {
     console.log("Creating SimplePool...");
-    pool = new SimplePool();
+    pool = new SimplePool({
+      getWebSocket: (url) => {
+        const ws = new WebSocket(url, wsOptions);
+        ws.onerror = (error) => {
+          console.error(`WebSocket error for ${url}:`, error);
+        };
+        return ws;
+      }
+    });
 
     const tags = [
       ["url", inputs.url],

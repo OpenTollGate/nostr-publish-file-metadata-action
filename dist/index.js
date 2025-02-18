@@ -5162,291 +5162,7 @@ exports.u64Lengths = u64Lengths;
 
 /***/ }),
 
-/***/ 798:
-/***/ ((module) => {
-
-"use strict";
-
-
-/**
- * Masks a buffer using the given mask.
- *
- * @param {Buffer} source The buffer to mask
- * @param {Buffer} mask The mask to use
- * @param {Buffer} output The buffer where to store the result
- * @param {Number} offset The offset at which to start writing
- * @param {Number} length The number of bytes to mask.
- * @public
- */
-const mask = (source, mask, output, offset, length) => {
-  for (var i = 0; i < length; i++) {
-    output[offset + i] = source[i] ^ mask[i & 3];
-  }
-};
-
-/**
- * Unmasks a buffer using the given mask.
- *
- * @param {Buffer} buffer The buffer to unmask
- * @param {Buffer} mask The mask to use
- * @public
- */
-const unmask = (buffer, mask) => {
-  // Required until https://github.com/nodejs/node/issues/9006 is resolved.
-  const length = buffer.length;
-  for (var i = 0; i < length; i++) {
-    buffer[i] ^= mask[i & 3];
-  }
-};
-
-module.exports = { mask, unmask };
-
-
-/***/ }),
-
-/***/ 1486:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-try {
-  module.exports = __nccwpck_require__(5668)(__dirname);
-} catch (e) {
-  module.exports = __nccwpck_require__(798);
-}
-
-
-/***/ }),
-
-/***/ 5668:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-const runtimeRequire =  true ? eval("require") : 0 // eslint-disable-line
-if (typeof runtimeRequire.addon === 'function') { // if the platform supports native resolving prefer that
-  module.exports = runtimeRequire.addon.bind(runtimeRequire)
-} else { // else use the runtime version here
-  module.exports = __nccwpck_require__(5110)
-}
-
-
-/***/ }),
-
-/***/ 5110:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-var fs = __nccwpck_require__(9896)
-var path = __nccwpck_require__(6928)
-var os = __nccwpck_require__(857)
-
-// Workaround to fix webpack's build warnings: 'the request of a dependency is an expression'
-var runtimeRequire =  true ? eval("require") : 0 // eslint-disable-line
-
-var vars = (process.config && process.config.variables) || {}
-var prebuildsOnly = !!process.env.PREBUILDS_ONLY
-var abi = process.versions.modules // TODO: support old node where this is undef
-var runtime = isElectron() ? 'electron' : (isNwjs() ? 'node-webkit' : 'node')
-
-var arch = process.env.npm_config_arch || os.arch()
-var platform = process.env.npm_config_platform || os.platform()
-var libc = process.env.LIBC || (isAlpine(platform) ? 'musl' : 'glibc')
-var armv = process.env.ARM_VERSION || (arch === 'arm64' ? '8' : vars.arm_version) || ''
-var uv = (process.versions.uv || '').split('.')[0]
-
-module.exports = load
-
-function load (dir) {
-  return runtimeRequire(load.resolve(dir))
-}
-
-load.resolve = load.path = function (dir) {
-  dir = path.resolve(dir || '.')
-
-  try {
-    var name = runtimeRequire(path.join(dir, 'package.json')).name.toUpperCase().replace(/-/g, '_')
-    if (process.env[name + '_PREBUILD']) dir = process.env[name + '_PREBUILD']
-  } catch (err) {}
-
-  if (!prebuildsOnly) {
-    var release = getFirst(path.join(dir, 'build/Release'), matchBuild)
-    if (release) return release
-
-    var debug = getFirst(path.join(dir, 'build/Debug'), matchBuild)
-    if (debug) return debug
-  }
-
-  var prebuild = resolve(dir)
-  if (prebuild) return prebuild
-
-  var nearby = resolve(path.dirname(process.execPath))
-  if (nearby) return nearby
-
-  var target = [
-    'platform=' + platform,
-    'arch=' + arch,
-    'runtime=' + runtime,
-    'abi=' + abi,
-    'uv=' + uv,
-    armv ? 'armv=' + armv : '',
-    'libc=' + libc,
-    'node=' + process.versions.node,
-    process.versions.electron ? 'electron=' + process.versions.electron : '',
-     true ? 'webpack=true' : 0 // eslint-disable-line
-  ].filter(Boolean).join(' ')
-
-  throw new Error('No native build was found for ' + target + '\n    loaded from: ' + dir + '\n')
-
-  function resolve (dir) {
-    // Find matching "prebuilds/<platform>-<arch>" directory
-    var tuples = readdirSync(path.join(dir, 'prebuilds')).map(parseTuple)
-    var tuple = tuples.filter(matchTuple(platform, arch)).sort(compareTuples)[0]
-    if (!tuple) return
-
-    // Find most specific flavor first
-    var prebuilds = path.join(dir, 'prebuilds', tuple.name)
-    var parsed = readdirSync(prebuilds).map(parseTags)
-    var candidates = parsed.filter(matchTags(runtime, abi))
-    var winner = candidates.sort(compareTags(runtime))[0]
-    if (winner) return path.join(prebuilds, winner.file)
-  }
-}
-
-function readdirSync (dir) {
-  try {
-    return fs.readdirSync(dir)
-  } catch (err) {
-    return []
-  }
-}
-
-function getFirst (dir, filter) {
-  var files = readdirSync(dir).filter(filter)
-  return files[0] && path.join(dir, files[0])
-}
-
-function matchBuild (name) {
-  return /\.node$/.test(name)
-}
-
-function parseTuple (name) {
-  // Example: darwin-x64+arm64
-  var arr = name.split('-')
-  if (arr.length !== 2) return
-
-  var platform = arr[0]
-  var architectures = arr[1].split('+')
-
-  if (!platform) return
-  if (!architectures.length) return
-  if (!architectures.every(Boolean)) return
-
-  return { name, platform, architectures }
-}
-
-function matchTuple (platform, arch) {
-  return function (tuple) {
-    if (tuple == null) return false
-    if (tuple.platform !== platform) return false
-    return tuple.architectures.includes(arch)
-  }
-}
-
-function compareTuples (a, b) {
-  // Prefer single-arch prebuilds over multi-arch
-  return a.architectures.length - b.architectures.length
-}
-
-function parseTags (file) {
-  var arr = file.split('.')
-  var extension = arr.pop()
-  var tags = { file: file, specificity: 0 }
-
-  if (extension !== 'node') return
-
-  for (var i = 0; i < arr.length; i++) {
-    var tag = arr[i]
-
-    if (tag === 'node' || tag === 'electron' || tag === 'node-webkit') {
-      tags.runtime = tag
-    } else if (tag === 'napi') {
-      tags.napi = true
-    } else if (tag.slice(0, 3) === 'abi') {
-      tags.abi = tag.slice(3)
-    } else if (tag.slice(0, 2) === 'uv') {
-      tags.uv = tag.slice(2)
-    } else if (tag.slice(0, 4) === 'armv') {
-      tags.armv = tag.slice(4)
-    } else if (tag === 'glibc' || tag === 'musl') {
-      tags.libc = tag
-    } else {
-      continue
-    }
-
-    tags.specificity++
-  }
-
-  return tags
-}
-
-function matchTags (runtime, abi) {
-  return function (tags) {
-    if (tags == null) return false
-    if (tags.runtime && tags.runtime !== runtime && !runtimeAgnostic(tags)) return false
-    if (tags.abi && tags.abi !== abi && !tags.napi) return false
-    if (tags.uv && tags.uv !== uv) return false
-    if (tags.armv && tags.armv !== armv) return false
-    if (tags.libc && tags.libc !== libc) return false
-
-    return true
-  }
-}
-
-function runtimeAgnostic (tags) {
-  return tags.runtime === 'node' && tags.napi
-}
-
-function compareTags (runtime) {
-  // Precedence: non-agnostic runtime, abi over napi, then by specificity.
-  return function (a, b) {
-    if (a.runtime !== b.runtime) {
-      return a.runtime === runtime ? -1 : 1
-    } else if (a.abi !== b.abi) {
-      return a.abi ? -1 : 1
-    } else if (a.specificity !== b.specificity) {
-      return a.specificity > b.specificity ? -1 : 1
-    } else {
-      return 0
-    }
-  }
-}
-
-function isNwjs () {
-  return !!(process.versions && process.versions.nw)
-}
-
-function isElectron () {
-  if (process.versions && process.versions.electron) return true
-  if (process.env.ELECTRON_RUN_AS_NODE) return true
-  return typeof window !== 'undefined' && window.process && window.process.type === 'renderer'
-}
-
-function isAlpine (platform) {
-  return platform === 'linux' && fs.existsSync('/etc/alpine-release')
-}
-
-// Exposed for unit tests
-// TODO: move to lib
-load.parseTags = parseTags
-load.matchTags = matchTags
-load.compareTags = compareTags
-load.parseTuple = parseTuple
-load.matchTuple = matchTuple
-load.compareTuples = compareTuples
-
-
-/***/ }),
-
-/***/ 7841:
+/***/ 4781:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -5454,9 +5170,9 @@ load.compareTuples = compareTuples
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createCurve = exports.getHash = void 0;
 /*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-const hmac_1 = __nccwpck_require__(9456);
-const utils_1 = __nccwpck_require__(9235);
-const weierstrass_js_1 = __nccwpck_require__(4536);
+const hmac_1 = __nccwpck_require__(4623);
+const utils_1 = __nccwpck_require__(7591);
+const weierstrass_js_1 = __nccwpck_require__(3396);
 // connects noble-curves to noble-hashes
 function getHash(hash) {
     return {
@@ -5475,7 +5191,7 @@ exports.createCurve = createCurve;
 
 /***/ }),
 
-/***/ 7931:
+/***/ 8015:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -5484,8 +5200,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.validateBasic = exports.wNAF = void 0;
 /*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
 // Abelian group utilities
-const modular_js_1 = __nccwpck_require__(354);
-const utils_js_1 = __nccwpck_require__(601);
+const modular_js_1 = __nccwpck_require__(9542);
+const utils_js_1 = __nccwpck_require__(3901);
 const _0n = BigInt(0);
 const _1n = BigInt(1);
 // Elliptic curve multiplication of Point by scalar. Fragile.
@@ -5643,15 +5359,15 @@ exports.validateBasic = validateBasic;
 
 /***/ }),
 
-/***/ 9584:
+/***/ 2660:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createHasher = exports.isogenyMap = exports.hash_to_field = exports.expand_message_xof = exports.expand_message_xmd = void 0;
-const modular_js_1 = __nccwpck_require__(354);
-const utils_js_1 = __nccwpck_require__(601);
+const modular_js_1 = __nccwpck_require__(9542);
+const utils_js_1 = __nccwpck_require__(3901);
 function validateDST(dst) {
     if (dst instanceof Uint8Array)
         return dst;
@@ -5831,7 +5547,7 @@ exports.createHasher = createHasher;
 
 /***/ }),
 
-/***/ 354:
+/***/ 9542:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -5840,7 +5556,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.mapHashToField = exports.getMinHashLength = exports.getFieldBytesLength = exports.hashToPrivateScalar = exports.FpSqrtEven = exports.FpSqrtOdd = exports.Field = exports.nLength = exports.FpIsSquare = exports.FpDiv = exports.FpInvertBatch = exports.FpPow = exports.validateField = exports.isNegativeLE = exports.FpSqrt = exports.tonelliShanks = exports.invert = exports.pow2 = exports.pow = exports.mod = void 0;
 /*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
 // Utilities for modular arithmetics and finite fields
-const utils_js_1 = __nccwpck_require__(601);
+const utils_js_1 = __nccwpck_require__(3901);
 // prettier-ignore
 const _0n = BigInt(0), _1n = BigInt(1), _2n = BigInt(2), _3n = BigInt(3);
 // prettier-ignore
@@ -6277,7 +5993,7 @@ exports.mapHashToField = mapHashToField;
 
 /***/ }),
 
-/***/ 601:
+/***/ 3901:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -6572,7 +6288,7 @@ exports.validateObject = validateObject;
 
 /***/ }),
 
-/***/ 4536:
+/***/ 3396:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -6581,10 +6297,10 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.mapToCurveSimpleSWU = exports.SWUFpSqrtRatio = exports.weierstrass = exports.weierstrassPoints = exports.DER = void 0;
 /*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
 // Short Weierstrass curve. The formula is: y² = x³ + ax + b
-const mod = __nccwpck_require__(354);
-const ut = __nccwpck_require__(601);
-const utils_js_1 = __nccwpck_require__(601);
-const curve_js_1 = __nccwpck_require__(7931);
+const mod = __nccwpck_require__(9542);
+const ut = __nccwpck_require__(3901);
+const utils_js_1 = __nccwpck_require__(3901);
+const curve_js_1 = __nccwpck_require__(8015);
 function validatePointOpts(curve) {
     const opts = (0, curve_js_1.validateBasic)(curve);
     ut.validateObject(opts, {
@@ -7642,7 +7358,7 @@ exports.mapToCurveSimpleSWU = mapToCurveSimpleSWU;
 
 /***/ }),
 
-/***/ 1489:
+/***/ 4197:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -7694,15 +7410,15 @@ exports["default"] = assert;
 
 /***/ }),
 
-/***/ 9551:
+/***/ 9795:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SHA2 = void 0;
-const _assert_js_1 = __nccwpck_require__(1489);
-const utils_js_1 = __nccwpck_require__(9235);
+const _assert_js_1 = __nccwpck_require__(4197);
+const utils_js_1 = __nccwpck_require__(7591);
 // Polyfill for Safari 14
 function setBigUint64(view, byteOffset, value, isLE) {
     if (typeof view.setBigUint64 === 'function')
@@ -7819,7 +7535,7 @@ exports.SHA2 = SHA2;
 
 /***/ }),
 
-/***/ 3513:
+/***/ 5933:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -7836,15 +7552,15 @@ exports.crypto = nc && typeof nc === 'object' && 'webcrypto' in nc ? nc.webcrypt
 
 /***/ }),
 
-/***/ 9456:
+/***/ 4623:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.hmac = exports.HMAC = void 0;
-const _assert_js_1 = __nccwpck_require__(1489);
-const utils_js_1 = __nccwpck_require__(9235);
+const _assert_js_1 = __nccwpck_require__(4197);
+const utils_js_1 = __nccwpck_require__(7591);
 // HMAC (RFC 2104)
 class HMAC extends utils_js_1.Hash {
     constructor(hash, _key) {
@@ -7925,15 +7641,15 @@ exports.hmac.create = (hash, key) => new HMAC(hash, key);
 
 /***/ }),
 
-/***/ 9675:
+/***/ 1263:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.sha224 = exports.sha256 = void 0;
-const _sha2_js_1 = __nccwpck_require__(9551);
-const utils_js_1 = __nccwpck_require__(9235);
+const _sha2_js_1 = __nccwpck_require__(9795);
+const utils_js_1 = __nccwpck_require__(7591);
 // SHA2-256 need to try 2^128 hashes to execute birthday attack.
 // BTC network is doing 2^67 hashes/sec as per early 2023.
 // Choice: a ? b : c
@@ -8061,7 +7777,7 @@ exports.sha224 = (0, utils_js_1.wrapConstructor)(() => new SHA224());
 
 /***/ }),
 
-/***/ 9235:
+/***/ 7591:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -8075,7 +7791,7 @@ exports.randomBytes = exports.wrapXOFConstructorWithOpts = exports.wrapConstruct
 // from `crypto` to `cryptoNode`, which imports native module.
 // Makes the utils un-importable in browsers without a bundler.
 // Once node.js 18 is deprecated, we can just drop the import.
-const crypto_1 = __nccwpck_require__(3513);
+const crypto_1 = __nccwpck_require__(5933);
 const u8a = (a) => a instanceof Uint8Array;
 // Cast array to different type
 const u8 = (arr) => new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
@@ -8242,7 +7958,7 @@ exports.randomBytes = randomBytes;
 
 /***/ }),
 
-/***/ 701:
+/***/ 6001:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -8250,13 +7966,13 @@ exports.randomBytes = randomBytes;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.encodeToCurve = exports.hashToCurve = exports.schnorr = exports.secp256k1 = void 0;
 /*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-const sha256_1 = __nccwpck_require__(9675);
-const utils_1 = __nccwpck_require__(9235);
-const modular_js_1 = __nccwpck_require__(354);
-const weierstrass_js_1 = __nccwpck_require__(4536);
-const utils_js_1 = __nccwpck_require__(601);
-const hash_to_curve_js_1 = __nccwpck_require__(9584);
-const _shortw_utils_js_1 = __nccwpck_require__(7841);
+const sha256_1 = __nccwpck_require__(1263);
+const utils_1 = __nccwpck_require__(7591);
+const modular_js_1 = __nccwpck_require__(9542);
+const weierstrass_js_1 = __nccwpck_require__(3396);
+const utils_js_1 = __nccwpck_require__(3901);
+const hash_to_curve_js_1 = __nccwpck_require__(2660);
+const _shortw_utils_js_1 = __nccwpck_require__(4781);
 const secp256k1P = BigInt('0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f');
 const secp256k1N = BigInt('0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141');
 const _1n = BigInt(1);
@@ -8506,7 +8222,7 @@ exports.encodeToCurve = (() => htf.encodeToCurve)();
 
 /***/ }),
 
-/***/ 6762:
+/***/ 4894:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -8565,15 +8281,15 @@ exports["default"] = assert;
 
 /***/ }),
 
-/***/ 9412:
+/***/ 6056:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SHA2 = void 0;
-const _assert_js_1 = __nccwpck_require__(6762);
-const utils_js_1 = __nccwpck_require__(3748);
+const _assert_js_1 = __nccwpck_require__(4894);
+const utils_js_1 = __nccwpck_require__(4248);
 // Polyfill for Safari 14
 function setBigUint64(view, byteOffset, value, isLE) {
     if (typeof view.setBigUint64 === 'function')
@@ -8690,7 +8406,7 @@ exports.SHA2 = SHA2;
 
 /***/ }),
 
-/***/ 8228:
+/***/ 5048:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -8707,16 +8423,16 @@ exports.crypto = nc && typeof nc === 'object' && 'webcrypto' in nc ? nc.webcrypt
 
 /***/ }),
 
-/***/ 286:
+/***/ 9474:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.hkdf = exports.expand = exports.extract = void 0;
-const _assert_js_1 = __nccwpck_require__(6762);
-const utils_js_1 = __nccwpck_require__(3748);
-const hmac_js_1 = __nccwpck_require__(6394);
+const _assert_js_1 = __nccwpck_require__(4894);
+const utils_js_1 = __nccwpck_require__(4248);
+const hmac_js_1 = __nccwpck_require__(1494);
 // HKDF (RFC 5869)
 // https://soatok.blog/2021/11/17/understanding-hkdf/
 /**
@@ -8792,15 +8508,15 @@ exports.hkdf = hkdf;
 
 /***/ }),
 
-/***/ 6394:
+/***/ 1494:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.hmac = exports.HMAC = void 0;
-const _assert_js_1 = __nccwpck_require__(6762);
-const utils_js_1 = __nccwpck_require__(3748);
+const _assert_js_1 = __nccwpck_require__(4894);
+const utils_js_1 = __nccwpck_require__(4248);
 // HMAC (RFC 2104)
 class HMAC extends utils_js_1.Hash {
     constructor(hash, _key) {
@@ -8881,15 +8597,15 @@ exports.hmac.create = (hash, key) => new HMAC(hash, key);
 
 /***/ }),
 
-/***/ 9094:
+/***/ 7178:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.sha224 = exports.sha256 = void 0;
-const _sha2_js_1 = __nccwpck_require__(9412);
-const utils_js_1 = __nccwpck_require__(3748);
+const _sha2_js_1 = __nccwpck_require__(6056);
+const utils_js_1 = __nccwpck_require__(4248);
 // Choice: a ? b : c
 const Chi = (a, b, c) => (a & b) ^ (~a & c);
 // Majority function, true if any two inpust is true
@@ -9015,7 +8731,7 @@ exports.sha224 = (0, utils_js_1.wrapConstructor)(() => new SHA224());
 
 /***/ }),
 
-/***/ 3748:
+/***/ 4248:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -9029,7 +8745,7 @@ exports.randomBytes = exports.wrapXOFConstructorWithOpts = exports.wrapConstruct
 // from `crypto` to `cryptoNode`, which imports native module.
 // Makes the utils un-importable in browsers without a bundler.
 // Once node.js 18 is deprecated, we can just drop the import.
-const crypto_1 = __nccwpck_require__(8228);
+const crypto_1 = __nccwpck_require__(5048);
 const u8a = (a) => a instanceof Uint8Array;
 // Cast array to different type
 const u8 = (arr) => new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
@@ -9197,7 +8913,7 @@ exports.randomBytes = randomBytes;
 
 /***/ }),
 
-/***/ 4784:
+/***/ 628:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -9606,6 +9322,290 @@ exports.bytes = exports.stringToBytes;
 
 /***/ }),
 
+/***/ 798:
+/***/ ((module) => {
+
+"use strict";
+
+
+/**
+ * Masks a buffer using the given mask.
+ *
+ * @param {Buffer} source The buffer to mask
+ * @param {Buffer} mask The mask to use
+ * @param {Buffer} output The buffer where to store the result
+ * @param {Number} offset The offset at which to start writing
+ * @param {Number} length The number of bytes to mask.
+ * @public
+ */
+const mask = (source, mask, output, offset, length) => {
+  for (var i = 0; i < length; i++) {
+    output[offset + i] = source[i] ^ mask[i & 3];
+  }
+};
+
+/**
+ * Unmasks a buffer using the given mask.
+ *
+ * @param {Buffer} buffer The buffer to unmask
+ * @param {Buffer} mask The mask to use
+ * @public
+ */
+const unmask = (buffer, mask) => {
+  // Required until https://github.com/nodejs/node/issues/9006 is resolved.
+  const length = buffer.length;
+  for (var i = 0; i < length; i++) {
+    buffer[i] ^= mask[i & 3];
+  }
+};
+
+module.exports = { mask, unmask };
+
+
+/***/ }),
+
+/***/ 1486:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+
+try {
+  module.exports = __nccwpck_require__(5668)(__dirname);
+} catch (e) {
+  module.exports = __nccwpck_require__(798);
+}
+
+
+/***/ }),
+
+/***/ 5668:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const runtimeRequire =  true ? eval("require") : 0 // eslint-disable-line
+if (typeof runtimeRequire.addon === 'function') { // if the platform supports native resolving prefer that
+  module.exports = runtimeRequire.addon.bind(runtimeRequire)
+} else { // else use the runtime version here
+  module.exports = __nccwpck_require__(5110)
+}
+
+
+/***/ }),
+
+/***/ 5110:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+var fs = __nccwpck_require__(9896)
+var path = __nccwpck_require__(6928)
+var os = __nccwpck_require__(857)
+
+// Workaround to fix webpack's build warnings: 'the request of a dependency is an expression'
+var runtimeRequire =  true ? eval("require") : 0 // eslint-disable-line
+
+var vars = (process.config && process.config.variables) || {}
+var prebuildsOnly = !!process.env.PREBUILDS_ONLY
+var abi = process.versions.modules // TODO: support old node where this is undef
+var runtime = isElectron() ? 'electron' : (isNwjs() ? 'node-webkit' : 'node')
+
+var arch = process.env.npm_config_arch || os.arch()
+var platform = process.env.npm_config_platform || os.platform()
+var libc = process.env.LIBC || (isAlpine(platform) ? 'musl' : 'glibc')
+var armv = process.env.ARM_VERSION || (arch === 'arm64' ? '8' : vars.arm_version) || ''
+var uv = (process.versions.uv || '').split('.')[0]
+
+module.exports = load
+
+function load (dir) {
+  return runtimeRequire(load.resolve(dir))
+}
+
+load.resolve = load.path = function (dir) {
+  dir = path.resolve(dir || '.')
+
+  try {
+    var name = runtimeRequire(path.join(dir, 'package.json')).name.toUpperCase().replace(/-/g, '_')
+    if (process.env[name + '_PREBUILD']) dir = process.env[name + '_PREBUILD']
+  } catch (err) {}
+
+  if (!prebuildsOnly) {
+    var release = getFirst(path.join(dir, 'build/Release'), matchBuild)
+    if (release) return release
+
+    var debug = getFirst(path.join(dir, 'build/Debug'), matchBuild)
+    if (debug) return debug
+  }
+
+  var prebuild = resolve(dir)
+  if (prebuild) return prebuild
+
+  var nearby = resolve(path.dirname(process.execPath))
+  if (nearby) return nearby
+
+  var target = [
+    'platform=' + platform,
+    'arch=' + arch,
+    'runtime=' + runtime,
+    'abi=' + abi,
+    'uv=' + uv,
+    armv ? 'armv=' + armv : '',
+    'libc=' + libc,
+    'node=' + process.versions.node,
+    process.versions.electron ? 'electron=' + process.versions.electron : '',
+     true ? 'webpack=true' : 0 // eslint-disable-line
+  ].filter(Boolean).join(' ')
+
+  throw new Error('No native build was found for ' + target + '\n    loaded from: ' + dir + '\n')
+
+  function resolve (dir) {
+    // Find matching "prebuilds/<platform>-<arch>" directory
+    var tuples = readdirSync(path.join(dir, 'prebuilds')).map(parseTuple)
+    var tuple = tuples.filter(matchTuple(platform, arch)).sort(compareTuples)[0]
+    if (!tuple) return
+
+    // Find most specific flavor first
+    var prebuilds = path.join(dir, 'prebuilds', tuple.name)
+    var parsed = readdirSync(prebuilds).map(parseTags)
+    var candidates = parsed.filter(matchTags(runtime, abi))
+    var winner = candidates.sort(compareTags(runtime))[0]
+    if (winner) return path.join(prebuilds, winner.file)
+  }
+}
+
+function readdirSync (dir) {
+  try {
+    return fs.readdirSync(dir)
+  } catch (err) {
+    return []
+  }
+}
+
+function getFirst (dir, filter) {
+  var files = readdirSync(dir).filter(filter)
+  return files[0] && path.join(dir, files[0])
+}
+
+function matchBuild (name) {
+  return /\.node$/.test(name)
+}
+
+function parseTuple (name) {
+  // Example: darwin-x64+arm64
+  var arr = name.split('-')
+  if (arr.length !== 2) return
+
+  var platform = arr[0]
+  var architectures = arr[1].split('+')
+
+  if (!platform) return
+  if (!architectures.length) return
+  if (!architectures.every(Boolean)) return
+
+  return { name, platform, architectures }
+}
+
+function matchTuple (platform, arch) {
+  return function (tuple) {
+    if (tuple == null) return false
+    if (tuple.platform !== platform) return false
+    return tuple.architectures.includes(arch)
+  }
+}
+
+function compareTuples (a, b) {
+  // Prefer single-arch prebuilds over multi-arch
+  return a.architectures.length - b.architectures.length
+}
+
+function parseTags (file) {
+  var arr = file.split('.')
+  var extension = arr.pop()
+  var tags = { file: file, specificity: 0 }
+
+  if (extension !== 'node') return
+
+  for (var i = 0; i < arr.length; i++) {
+    var tag = arr[i]
+
+    if (tag === 'node' || tag === 'electron' || tag === 'node-webkit') {
+      tags.runtime = tag
+    } else if (tag === 'napi') {
+      tags.napi = true
+    } else if (tag.slice(0, 3) === 'abi') {
+      tags.abi = tag.slice(3)
+    } else if (tag.slice(0, 2) === 'uv') {
+      tags.uv = tag.slice(2)
+    } else if (tag.slice(0, 4) === 'armv') {
+      tags.armv = tag.slice(4)
+    } else if (tag === 'glibc' || tag === 'musl') {
+      tags.libc = tag
+    } else {
+      continue
+    }
+
+    tags.specificity++
+  }
+
+  return tags
+}
+
+function matchTags (runtime, abi) {
+  return function (tags) {
+    if (tags == null) return false
+    if (tags.runtime && tags.runtime !== runtime && !runtimeAgnostic(tags)) return false
+    if (tags.abi && tags.abi !== abi && !tags.napi) return false
+    if (tags.uv && tags.uv !== uv) return false
+    if (tags.armv && tags.armv !== armv) return false
+    if (tags.libc && tags.libc !== libc) return false
+
+    return true
+  }
+}
+
+function runtimeAgnostic (tags) {
+  return tags.runtime === 'node' && tags.napi
+}
+
+function compareTags (runtime) {
+  // Precedence: non-agnostic runtime, abi over napi, then by specificity.
+  return function (a, b) {
+    if (a.runtime !== b.runtime) {
+      return a.runtime === runtime ? -1 : 1
+    } else if (a.abi !== b.abi) {
+      return a.abi ? -1 : 1
+    } else if (a.specificity !== b.specificity) {
+      return a.specificity > b.specificity ? -1 : 1
+    } else {
+      return 0
+    }
+  }
+}
+
+function isNwjs () {
+  return !!(process.versions && process.versions.nw)
+}
+
+function isElectron () {
+  if (process.versions && process.versions.electron) return true
+  if (process.env.ELECTRON_RUN_AS_NODE) return true
+  return typeof window !== 'undefined' && window.process && window.process.type === 'renderer'
+}
+
+function isAlpine (platform) {
+  return platform === 'linux' && fs.existsSync('/etc/alpine-release')
+}
+
+// Exposed for unit tests
+// TODO: move to lib
+load.parseTags = parseTags
+load.matchTags = matchTags
+load.compareTags = compareTags
+load.parseTuple = parseTuple
+load.matchTuple = matchTuple
+load.compareTuples = compareTuples
+
+
+/***/ }),
+
 /***/ 770:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -9900,7 +9900,7 @@ const BalancedPool = __nccwpck_require__(1093)
 const Agent = __nccwpck_require__(9965)
 const util = __nccwpck_require__(3440)
 const { InvalidArgumentError } = errors
-const api = __nccwpck_require__(6615)
+const api = __nccwpck_require__(8996)
 const buildConnector = __nccwpck_require__(9136)
 const MockClient = __nccwpck_require__(7365)
 const MockAgent = __nccwpck_require__(7501)
@@ -11176,7 +11176,7 @@ module.exports = upgrade
 
 /***/ }),
 
-/***/ 6615:
+/***/ 8996:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -32631,7 +32631,7 @@ function callListener(listener, thisArg, event) {
 "use strict";
 
 
-const { tokenChars } = __nccwpck_require__(8996);
+const { tokenChars } = __nccwpck_require__(6615);
 
 /**
  * Adds an offer to the map of extension offers or a parameter to the map of
@@ -33437,7 +33437,7 @@ const {
   kWebSocket
 } = __nccwpck_require__(1791);
 const { concat, toArrayBuffer, unmask } = __nccwpck_require__(5803);
-const { isValidStatusCode, isValidUTF8 } = __nccwpck_require__(8996);
+const { isValidStatusCode, isValidUTF8 } = __nccwpck_require__(6615);
 
 const FastBuffer = Buffer[Symbol.species];
 
@@ -34148,7 +34148,7 @@ const { randomFillSync } = __nccwpck_require__(6982);
 
 const PerMessageDeflate = __nccwpck_require__(4376);
 const { EMPTY_BUFFER, kWebSocket, NOOP } = __nccwpck_require__(1791);
-const { isBlob, isValidStatusCode } = __nccwpck_require__(8996);
+const { isBlob, isValidStatusCode } = __nccwpck_require__(6615);
 const { mask: applyMask, toBuffer } = __nccwpck_require__(5803);
 
 const kByteLength = Symbol('kByteLength');
@@ -34918,7 +34918,7 @@ module.exports = createWebSocketStream;
 "use strict";
 
 
-const { tokenChars } = __nccwpck_require__(8996);
+const { tokenChars } = __nccwpck_require__(6615);
 
 /**
  * Parses the `Sec-WebSocket-Protocol` header into a set of subprotocol names.
@@ -34982,7 +34982,7 @@ module.exports = { parse };
 
 /***/ }),
 
-/***/ 8996:
+/***/ 6615:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -35710,7 +35710,7 @@ const { URL } = __nccwpck_require__(7016);
 const PerMessageDeflate = __nccwpck_require__(4376);
 const Receiver = __nccwpck_require__(893);
 const Sender = __nccwpck_require__(7389);
-const { isBlob } = __nccwpck_require__(8996);
+const { isBlob } = __nccwpck_require__(6615);
 
 const {
   BINARY_TYPES,
@@ -39027,8 +39027,8 @@ __export(nostr_tools_exports, {
 module.exports = __toCommonJS(nostr_tools_exports);
 
 // pure.ts
-var import_secp256k1 = __nccwpck_require__(701);
-var import_utils = __nccwpck_require__(3748);
+var import_secp256k1 = __nccwpck_require__(6001);
+var import_utils = __nccwpck_require__(4248);
 
 // core.ts
 var verifiedSymbol = Symbol("verified");
@@ -39069,7 +39069,7 @@ function sortEvents(events) {
 }
 
 // pure.ts
-var import_sha256 = __nccwpck_require__(9094);
+var import_sha256 = __nccwpck_require__(7178);
 
 // utils.ts
 var utils_exports = {};
@@ -40098,8 +40098,8 @@ __export(nip19_exports, {
   npubEncode: () => npubEncode,
   nsecEncode: () => nsecEncode
 });
-var import_utils5 = __nccwpck_require__(3748);
-var import_base = __nccwpck_require__(4784);
+var import_utils5 = __nccwpck_require__(4248);
+var import_base = __nccwpck_require__(628);
 var NostrTypeGuard = {
   isNProfile: (value) => /^nprofile1[a-z\d]+$/.test(value || ""),
   isNEvent: (value) => /^nevent1[a-z\d]+$/.test(value || ""),
@@ -40359,10 +40359,10 @@ __export(nip04_exports, {
   decrypt: () => decrypt,
   encrypt: () => encrypt
 });
-var import_utils7 = __nccwpck_require__(3748);
-var import_secp256k12 = __nccwpck_require__(701);
+var import_utils7 = __nccwpck_require__(4248);
+var import_secp256k12 = __nccwpck_require__(6001);
 var import_aes = __nccwpck_require__(2596);
-var import_base2 = __nccwpck_require__(4784);
+var import_base2 = __nccwpck_require__(628);
 async function encrypt(secretKey, pubkey, text) {
   const privkey = secretKey instanceof Uint8Array ? (0, import_utils7.bytesToHex)(secretKey) : secretKey;
   const key = import_secp256k12.secp256k1.getSharedSecret(privkey, "02" + pubkey);
@@ -40577,8 +40577,8 @@ __export(nip13_exports, {
   getPow: () => getPow,
   minePow: () => minePow
 });
-var import_utils9 = __nccwpck_require__(3748);
-var import_sha2562 = __nccwpck_require__(9094);
+var import_utils9 = __nccwpck_require__(4248);
+var import_sha2562 = __nccwpck_require__(7178);
 function getPow(hex) {
   let count = 0;
   for (let i2 = 0; i2 < 64; i2 += 8) {
@@ -40948,12 +40948,12 @@ __export(nip44_exports, {
 });
 var import_chacha = __nccwpck_require__(7135);
 var import_utils11 = __nccwpck_require__(9354);
-var import_secp256k13 = __nccwpck_require__(701);
-var import_hkdf = __nccwpck_require__(286);
-var import_hmac = __nccwpck_require__(6394);
-var import_sha2563 = __nccwpck_require__(9094);
-var import_utils12 = __nccwpck_require__(3748);
-var import_base3 = __nccwpck_require__(4784);
+var import_secp256k13 = __nccwpck_require__(6001);
+var import_hkdf = __nccwpck_require__(9474);
+var import_hmac = __nccwpck_require__(1494);
+var import_sha2563 = __nccwpck_require__(7178);
+var import_utils12 = __nccwpck_require__(4248);
+var import_base3 = __nccwpck_require__(628);
 var minPlaintextSize = 1;
 var maxPlaintextSize = 65535;
 function getConversationKey(privkeyA, pubkeyB) {
@@ -41097,7 +41097,7 @@ __export(nip57_exports, {
   useFetchImplementation: () => useFetchImplementation4,
   validateZapRequest: () => validateZapRequest
 });
-var import_base4 = __nccwpck_require__(4784);
+var import_base4 = __nccwpck_require__(628);
 var _fetch4;
 try {
   _fetch4 = fetch;
@@ -41293,9 +41293,9 @@ __export(nip98_exports, {
   validateEventUrlTag: () => validateEventUrlTag,
   validateToken: () => validateToken
 });
-var import_sha2564 = __nccwpck_require__(9094);
-var import_utils15 = __nccwpck_require__(3748);
-var import_base5 = __nccwpck_require__(4784);
+var import_sha2564 = __nccwpck_require__(7178);
+var import_utils15 = __nccwpck_require__(4248);
+var import_base5 = __nccwpck_require__(628);
 var _authorizationScheme = "Nostr ";
 async function getToken(loginUrl, httpMethod, sign, includeAuthorizationScheme = false, payload) {
   const event = {
@@ -41436,19 +41436,38 @@ async function validateEvent2(event, url, method, body) {
 /******/ 	
 /************************************************************************/
 var __webpack_exports__ = {};
-const { getInput, setFailed, setOutput } = __nccwpck_require__(7484);
+const src_WebSocket = __nccwpck_require__(1354);
 const { SimplePool, nip19 } = __nccwpck_require__(510);
 const { finalizeEvent } = __nccwpck_require__(510);
-const src_WebSocket = __nccwpck_require__(1354);
+const { getInput, setFailed, setOutput } = __nccwpck_require__(7484);
 
-// Set up WebSocket globally
-global.WebSocket = src_WebSocket;
+// Configure WebSocket with explicit options
+const wsOptions = {
+  perMessageDeflate: false,
+  maxPayload: 100 * 1024 * 1024,
+  skipUTF8Validation: true
+};
+
+// Set up WebSocket globally with proper configuration
+global.WebSocket = class extends src_WebSocket {
+  constructor(address, protocols) {
+    super(address, protocols, wsOptions);
+  }
+};
 
 async function publishNIP94Event(inputs) {
   let pool = null;
   try {
     console.log("Creating SimplePool...");
-    pool = new SimplePool();
+    pool = new SimplePool({
+      getWebSocket: (url) => {
+        const ws = new src_WebSocket(url, wsOptions);
+        ws.onerror = (error) => {
+          console.error(`WebSocket error for ${url}:`, error);
+        };
+        return ws;
+      }
+    });
 
     const tags = [
       ["url", inputs.url],
