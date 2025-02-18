@@ -1,11 +1,10 @@
 // src/nip94-publisher.ts
 import { getInput, setFailed, setOutput } from "@actions/core";
 import { SimplePool, nip19 } from "nostr-tools";
-import { getPublicKey, finalizeEvent } from "nostr-tools";
+import { finalizeEvent } from "nostr-tools";
 import WebSocket from 'ws';
 (global as any).WebSocket = WebSocket;
 
-// Modify the NIP94Inputs interface
 interface NIP94Inputs {
   relays: string[];
   url: string;
@@ -39,11 +38,41 @@ async function publishNIP94Event(inputs: NIP94Inputs) {
 
     const signedEvent = finalizeEvent(eventTemplate, inputs.nsec);
 
+    // Actual relay publishing implementation
+    console.log(`Publishing to ${inputs.relays.length} relays...`);
+    let publishedCount = 0;
+    
+    // Attempt to publish to all relays with timeout
+    await Promise.any(
+      inputs.relays.map(async (relay) => {
+        const pub = pool.publish(relay, signedEvent);
+        await new Promise((resolve, reject) => {
+          pub.on('ok', () => {
+            console.log(`Published to ${relay}`);
+            publishedCount++;
+            resolve(true);
+          });
+          pub.on('failed', (reason: string) => {
+            console.error(`Failed to publish to ${relay}: ${reason}`);
+            reject(reason);
+          });
+          setTimeout(() => reject(new Error('Publish timeout')), 10000);
+        });
+      })
+    );
+
+    if (publishedCount === 0) {
+      throw new Error("Failed to publish to any relay");
+    }
+
     return {
       eventId: signedEvent.id,
       noteId: nip19.noteEncode(signedEvent.id),
       rawEvent: signedEvent,
     };
+  } catch (error) {
+    console.error("Publishing error:", error);
+    throw error;
   } finally {
     pool.close(inputs.relays);
   }
