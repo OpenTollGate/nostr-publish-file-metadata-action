@@ -60,11 +60,24 @@ try {
   
   // Process nsec
   const nsecInput = getInput("nsec");
+  if (!nsecInput || nsecInput.length < 6) {
+    throw new Error("Invalid nsec: input must be at least 6 characters long");
+  }
   const decoded = nip19.decode(nsecInput).data as string;
   const hexBytes = decoded.startsWith('nsec') ? decoded : decoded.slice(4);
-  const nsecBytes = new Uint8Array(
-    hexBytes.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16))
-  );
+  let nsecBytes: Uint8Array;
+  try {
+    // Handle both nsec and hex format
+    if (nsecInput.startsWith('nsec')) {
+      const decoded = nip19.decode(nsecInput);
+      nsecBytes = new Uint8Array(Buffer.from(decoded.data as string, 'hex'));
+    } else {
+      // Assume raw hex
+      nsecBytes = new Uint8Array(Buffer.from(nsecInput, 'hex'));
+    }
+  } catch (error) {
+    throw new Error(`Failed to decode nsec: ${error}`);
+  }
 
   // Construct inputs with proper variable names
   const inputs: NIP94Inputs = {
