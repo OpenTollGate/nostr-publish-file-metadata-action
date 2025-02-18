@@ -91,7 +91,7 @@ jobs:
         id: publish-retry-2
         uses: ./
         with:
-          relays: wss://relay.damus.io,wss://nos.lol
+          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/,wss://orangesync.tech
           url: ${{ steps.upload.outputs.blossomUrl }}
           mimeType: text/plain
           fileHash: ${{ steps.upload.outputs.blossomHash }}
