@@ -1,13 +1,27 @@
 {
   "compilerOptions": {
-    "target": "es2023",
-    "module": "preserve",
-    "moduleResolution": "Bundler",
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
+    "target": "ES2018",
+    "module": "commonjs",
+    "outDir": "./dist",
+    "rootDir": "./src",
     "strict": true,
+    "esModuleInterop": true,
     "skipLibCheck": true,
-    "outDir": "dist"
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "baseUrl": ".",
+    "paths": {
+      "nostr-tools/*": ["./node_modules/nostr-tools/*"]  // Updated path mapping
+    },
+    "resolveJsonModule": true,  // Added for JSON imports
+    "declaration": true,  // Generates .d.ts files
+    "sourceMap": true    // Helps with debugging
   },
-  "include": ["src"],
+  "include": [
+    "src/**/*"    // Explicitly include source files
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

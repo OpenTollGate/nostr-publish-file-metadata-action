@@ -1,0 +1,100 @@
+name: Test NIP-94 Publishing
+on: [push, pull_request]
+
+jobs:
+  test-upload-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Create test file
+        run: |
+          echo "Nostr file metadata test - $(date)" > testfile.txt
+      
+      # Add step to install dependencies and build
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      # Add step to make the script executable
+      - name: Make script executable
+        run: chmod +x dist/index.js
+      
+      - name: Upload to Blossom
+        id: upload
+        continue-on-error: true
+        uses: c03rad0r/upload-blossom-action@using-nsec-argument
+        with:
+          host: ${{ secrets.HOST }}
+          filePath: testfile.txt
+          nostrPrivateKey: ${{ secrets.NSEC }}
+
+      - name: Upload to Blossom (Retry 1)
+        id: upload-retry-1
+        if: steps.upload.outcome == 'failure'
+        continue-on-error: true
+        uses: c03rad0r/upload-blossom-action@using-nsec-argument
+        with:
+          host: ${{ secrets.HOST }}
+          filePath: testfile.txt
+          nostrPrivateKey: ${{ secrets.NSEC }}
+
+      - name: Upload to Blossom (Final Attempt)
+        id: upload-retry-2
+        if: steps.upload-retry-1.outcome == 'failure'
+        uses: c03rad0r/upload-blossom-action@using-nsec-argument
+        with:
+          host: ${{ secrets.HOST }}
+          filePath: testfile.txt
+          nostrPrivateKey: ${{ secrets.NSEC }}
+
+      - name: Publish NIP-94 Metadata
+        continue-on-error: true
+        id: publish
+        uses: ./
+        with:
+          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/,wss://orangesync.tech,wss://damus.io,wss://nostr.land
+          url: ${{ steps.upload.outputs.blossomUrl }}
+          mimeType: text/plain
+          fileHash: ${{ steps.upload.outputs.blossomHash }}
+          content: "Test file uploaded via GitHub Actions"
+          nsec: ${{ secrets.NSEC }}
+          size: ${{ steps.upload.outputs.size }}
+
+      - name: Publish NIP-94 Metadata (Retry 1)
+        if: steps.publish.outcome == 'failure'
+        continue-on-error: true
+        id: publish-retry-1
+        uses: ./
+        with:
+          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/,wss://orangesync.tech,wss://damus.io,wss://nostr.land
+          url: ${{ steps.upload.outputs.blossomUrl }}
+          mimeType: text/plain
+          fileHash: ${{ steps.upload.outputs.blossomHash }}
+          content: "Test file uploaded via GitHub Actions"
+          nsec: ${{ secrets.NSEC }}
+          size: ${{ steps.upload.outputs.size }}
+
+      - name: Publish NIP-94 Metadata (Final Attempt)
+        if: steps.publish-retry-1.outcome == 'failure'
+        id: publish-retry-2
+        uses: ./
+        with:
+          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/,wss://orangesync.tech,wss://damus.io,wss://nostr.land
+          url: ${{ steps.upload.outputs.blossomUrl }}
+          mimeType: text/plain
+          fileHash: ${{ steps.upload.outputs.blossomHash }}
+          content: "Test file uploaded via GitHub Actions"
+          nsec: ${{ secrets.NSEC }}
+          size: ${{ steps.upload.outputs.size }}
