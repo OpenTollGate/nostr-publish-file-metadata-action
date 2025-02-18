@@ -42,27 +42,38 @@ async function publishNIP94Event(inputs: NIP94Inputs) {
     console.log(`Publishing to ${inputs.relays.length} relays...`);
     let publishedCount = 0;
     
-    // Attempt to publish to all relays with timeout
-    await Promise.any(
-      inputs.relays.map(async (relay) => {
-        const pub = pool.publish(relay, signedEvent);
-        await new Promise((resolve, reject) => {
-          pub.on('ok', () => {
+    const publishPromises = inputs.relays.map((relay) => {
+      return new Promise<void>((resolve, reject) => {
+        try {
+          const pub = pool.publish([relay], signedEvent);
+          const timeout = setTimeout(() => {
+            reject(new Error(`Timeout publishing to ${relay}`));
+          }, 10000);
+
+          pub.then(() => {
+            clearTimeout(timeout);
             console.log(`Published to ${relay}`);
             publishedCount++;
-            resolve(true);
+            resolve();
+          }).catch((error) => {
+            clearTimeout(timeout);
+            console.error(`Failed to publish to ${relay}:`, error);
+            reject(error);
           });
-          pub.on('failed', (reason: string) => {
-            console.error(`Failed to publish to ${relay}: ${reason}`);
-            reject(reason);
-          });
-          setTimeout(() => reject(new Error('Publish timeout')), 10000);
-        });
-      })
-    );
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
 
-    if (publishedCount === 0) {
-      throw new Error("Failed to publish to any relay");
+    try {
+      // Wait for at least one successful publish
+      await Promise.race(publishPromises);
+    } catch (error) {
+      console.error("Publishing error:", error);
+      if (publishedCount === 0) {
+        throw new Error("Failed to publish to any relay");
+      }
     }
 
     return {
@@ -70,9 +81,6 @@ async function publishNIP94Event(inputs: NIP94Inputs) {
       noteId: nip19.noteEncode(signedEvent.id),
       rawEvent: signedEvent,
     };
-  } catch (error) {
-    console.error("Publishing error:", error);
-    throw error;
   } finally {
     pool.close(inputs.relays);
   }
