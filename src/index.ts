@@ -24,8 +24,21 @@ interface NostrEvent extends Event {
   tags: string[][];
 }
 
+// Utility function to validate relay URLs
+function validateRelays(relays: string[]): string[] {
+  return relays
+    .map(r => r.trim())
+    .filter(r => r.startsWith('wss://') && r.length > 6)
+    .map(r => r.endsWith('/') ? r.slice(0, -1) : r);
+}
+
 // Publishing function
 async function publishNIP94Event(inputs: NIP94Inputs) {
+  const validRelays = validateRelays(inputs.relays);
+  if (validRelays.length === 0) {
+    throw new Error('No valid relay URLs provided');
+  }
+
   const pool = new SimplePool();
   try {
     const tags = [
@@ -52,17 +65,25 @@ async function publishNIP94Event(inputs: NIP94Inputs) {
       rawEvent: signedEvent,
     };
   } finally {
-    pool.close(inputs.relays);
+    pool.close(validRelays);
   }
 }
 
 // Verification function
 async function verifyNIP94Event() {
-  const relays = getInput('relays').split(',');
-  const eventId = getInput('eventId');
-  const expectedContent = getInput('expectedContent');
-  const expectedHash = getInput('fileHash');
-  
+  const relays = validateRelays(process.env.RELAYS?.split(',') || []);
+  if (relays.length === 0) {
+    throw new Error('No valid relay URLs provided');
+  }
+
+  const eventId = process.env.EVENT_ID;
+  const expectedContent = process.env.EXPECTED_CONTENT;
+  const expectedHash = process.env.FILE_HASH;
+
+  if (!eventId || !expectedContent || !expectedHash) {
+    throw new Error('Missing required environment variables');
+  }
+
   const pool = new SimplePool();
   
   try {
@@ -136,7 +157,11 @@ async function main() {
   } else {
     try {
       // Get all required inputs
-      const relays = getInput("relays").split(",");
+      const relays = validateRelays(getInput("relays").split(","));
+      if (relays.length === 0) {
+        throw new Error('No valid relay URLs provided');
+      }
+
       const url = getInput("url");
       const mimeType = getInput("mimeType");
       const fileHash = getInput("fileHash");
