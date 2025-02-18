@@ -58,26 +58,47 @@ try {
   const fileHash = getInput("fileHash");
   const content = getInput("content");
   
-  // Process nsec
-  const nsecInput = getInput("nsec");
-  if (!nsecInput || nsecInput.length < 6) {
-    throw new Error("Invalid nsec: input must be at least 6 characters long");
+// Process nsec
+const nsecInput = getInput("nsec");
+let nsecBytes: Uint8Array;
+
+try {
+  if (!nsecInput) {
+    throw new Error("nsec input is required");
   }
-  const decoded = nip19.decode(nsecInput).data as string;
-  const hexBytes = decoded.startsWith('nsec') ? decoded : decoded.slice(4);
-  let nsecBytes: Uint8Array;
-  try {
-    // Handle both nsec and hex format
-    if (nsecInput.startsWith('nsec')) {
-      const decoded = nip19.decode(nsecInput);
-      nsecBytes = new Uint8Array(Buffer.from(decoded.data as string, 'hex'));
-    } else {
-      // Assume raw hex
-      nsecBytes = new Uint8Array(Buffer.from(nsecInput, 'hex'));
+
+  // Remove any whitespace
+  const cleanNsec = nsecInput.trim();
+
+  // Handle different formats
+  if (cleanNsec.startsWith('nsec1')) {
+    // Handle bech32 nsec format
+    const decoded = nip19.decode(cleanNsec);
+    nsecBytes = new Uint8Array(Buffer.from(decoded.data as string, 'hex'));
+  } else {
+    // Handle hex format
+    // Remove '0x' prefix if present
+    const hexString = cleanNsec.replace('0x', '');
+    
+    // Validate hex string
+    if (!/^[0-9a-fA-F]{64}$/.test(hexString)) {
+      throw new Error("Invalid hex format: must be 64 characters long and contain only hex characters");
     }
-  } catch (error) {
-    throw new Error(`Failed to decode nsec: ${error}`);
+    
+    nsecBytes = new Uint8Array(Buffer.from(hexString, 'hex'));
   }
+
+  // Validate the length of the resulting bytes
+  if (nsecBytes.length !== 32) {
+    throw new Error(`Invalid private key length: expected 32 bytes, got ${nsecBytes.length}`);
+  }
+
+} catch (error) {
+  if (error instanceof Error) {
+    throw new Error(`Failed to process nsec: ${error.message}`);
+  }
+  throw error;
+}
 
   // Construct inputs with proper variable names
   const inputs: NIP94Inputs = {
