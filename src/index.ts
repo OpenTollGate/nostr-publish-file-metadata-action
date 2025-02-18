@@ -1,11 +1,11 @@
-// src/nip94-publisher.ts
+// src/index.ts
 import { getInput, setFailed, setOutput } from "@actions/core";
-import { SimplePool, nip19 } from "nostr-tools";
+import { SimplePool, nip19, Event } from "nostr-tools";
 import { getPublicKey, finalizeEvent } from "nostr-tools";
 import WebSocket from 'ws';
 (global as any).WebSocket = WebSocket;
 
-// Modify the NIP94Inputs interface
+// Interfaces
 interface NIP94Inputs {
   relays: string[];
   url: string;
@@ -18,6 +18,13 @@ interface NIP94Inputs {
   nsec: Uint8Array;
 }
 
+interface NostrEvent extends Event {
+  id: string;
+  content: string;
+  tags: string[][];
+}
+
+// Publishing function
 async function publishNIP94Event(inputs: NIP94Inputs) {
   const pool = new SimplePool();
   try {
@@ -49,81 +56,147 @@ async function publishNIP94Event(inputs: NIP94Inputs) {
   }
 }
 
-// Update input processing
-try {
-  // Get all required inputs first
-  const relays = getInput("relays").split(",");
-  const url = getInput("url");
-  const mimeType = getInput("mimeType");
-  const fileHash = getInput("fileHash");
-  const content = getInput("content");
+// Verification function
+async function verifyNIP94Event() {
+  const relays = getInput('relays').split(',');
+  const eventId = getInput('eventId');
+  const expectedContent = getInput('expectedContent');
+  const expectedHash = getInput('fileHash');
   
-// Process nsec
-const nsecInput = getInput("nsec");
-let nsecBytes: Uint8Array;
+  const pool = new SimplePool();
+  
+  try {
+    return new Promise<void>((resolve, reject) => {
+      let timeoutId: NodeJS.Timeout;
+      let eventFound = false;
 
-try {
-  if (!nsecInput) {
-    throw new Error("nsec input is required");
+      const sub = pool.subscribeMany(
+        relays,
+        [
+          {
+            ids: [eventId],
+            kinds: [1063]
+          }
+        ],
+        {
+          onevent(event: NostrEvent) {
+            eventFound = true;
+            clearTimeout(timeoutId);
+            
+            try {
+              if (event.content !== expectedContent) {
+                throw new Error(`Content mismatch\nExpected: ${expectedContent}\nReceived: ${event.content}`);
+              }
+
+              const xTag = event.tags.find((t: string[]) => t[0] === 'x');
+              if (!xTag || xTag[1] !== expectedHash) {
+                throw new Error('File hash validation failed');
+              }
+
+              console.log('✅ Verification passed');
+              pool.close(relays);
+              resolve();
+            } catch (error) {
+              pool.close(relays);
+              reject(error);
+            }
+          },
+          oneose() {
+            if (!eventFound) {
+              pool.close(relays);
+              reject(new Error('Event not found on any relays'));
+            }
+          }
+        }
+      );
+
+      timeoutId = setTimeout(() => {
+        if (!eventFound) {
+          pool.close(relays);
+          reject(new Error('Timeout waiting for event'));
+        }
+      }, 10000);
+    });
+  } catch (error) {
+    console.error('Verification failed:', error);
+    setFailed(error instanceof Error ? error.message : 'Unknown error during verification');
+    throw error;
   }
-
-  // Remove any whitespace
-  const cleanNsec = nsecInput.trim();
-
-  // Handle different formats
-  if (cleanNsec.startsWith('nsec1')) {
-    // Handle bech32 nsec format
-    const decoded = nip19.decode(cleanNsec);
-    nsecBytes = new Uint8Array(Buffer.from(decoded.data as string, 'hex'));
-  } else {
-    // Handle hex format
-    // Remove '0x' prefix if present
-    const hexString = cleanNsec.replace('0x', '');
-    
-    // Validate hex string
-    if (!/^[0-9a-fA-F]{64}$/.test(hexString)) {
-      throw new Error("Invalid hex format: must be 64 characters long and contain only hex characters");
-    }
-    
-    nsecBytes = new Uint8Array(Buffer.from(hexString, 'hex'));
-  }
-
-  // Validate the length of the resulting bytes
-  if (nsecBytes.length !== 32) {
-    throw new Error(`Invalid private key length: expected 32 bytes, got ${nsecBytes.length}`);
-  }
-
-} catch (error) {
-  if (error instanceof Error) {
-    throw new Error(`Failed to process nsec: ${error.message}`);
-  }
-  throw error;
 }
 
-  // Construct inputs with proper variable names
-  const inputs: NIP94Inputs = {
-    relays,
-    url,
-    mimeType,
-    fileHash,
-    content,
-    nsec: nsecBytes,
-    originalHash: getInput("originalHash") || undefined,
-    size: Number(getInput("size")) || undefined,
-    dimensions: getInput("dimensions") || undefined,
-  };
+// Main execution logic
+async function main() {
+  if (process.env.VERIFY_MODE === 'true') {
+    try {
+      await verifyNIP94Event();
+    } catch (error) {
+      setFailed(error instanceof Error ? error.message : 'Verification failed');
+      process.exit(1);
+    }
+  } else {
+    try {
+      // Get all required inputs
+      const relays = getInput("relays").split(",");
+      const url = getInput("url");
+      const mimeType = getInput("mimeType");
+      const fileHash = getInput("fileHash");
+      const content = getInput("content");
+      
+      // Process nsec
+      const nsecInput = getInput("nsec");
+      let nsecBytes: Uint8Array;
 
-  publishNIP94Event(inputs)
-    .then(result => {
+      if (!nsecInput) {
+        throw new Error("nsec input is required");
+      }
+
+      // Remove any whitespace
+      const cleanNsec = nsecInput.trim();
+
+      // Handle different formats
+      if (cleanNsec.startsWith('nsec1')) {
+        const decoded = nip19.decode(cleanNsec);
+        nsecBytes = new Uint8Array(Buffer.from(decoded.data as string, 'hex'));
+      } else {
+        const hexString = cleanNsec.replace('0x', '');
+        
+        if (!/^[0-9a-fA-F]{64}$/.test(hexString)) {
+          throw new Error("Invalid hex format: must be 64 characters long and contain only hex characters");
+        }
+        
+        nsecBytes = new Uint8Array(Buffer.from(hexString, 'hex'));
+      }
+
+      if (nsecBytes.length !== 32) {
+        throw new Error(`Invalid private key length: expected 32 bytes, got ${nsecBytes.length}`);
+      }
+
+      // Construct inputs
+      const inputs: NIP94Inputs = {
+        relays,
+        url,
+        mimeType,
+        fileHash,
+        content,
+        nsec: nsecBytes,
+        originalHash: getInput("originalHash") || undefined,
+        size: Number(getInput("size")) || undefined,
+        dimensions: getInput("dimensions") || undefined,
+      };
+
+      const result = await publishNIP94Event(inputs);
       setOutput("eventId", result.eventId);
       setOutput("noteId", result.noteId);
       console.log(`Published NIP-94 event: ${result.noteId}`);
       console.log(`NIP-94 events won't render on most clients`);
-    })
-    .catch(err => {
-      throw new Error(`NIP-94 publish failed: ${err}`);
-    });
-} catch (error) {
-  console.error("Action failed:", error instanceof Error ? error.message : error);
-  setFailed("NIP-94 publication failed");
+
+    } catch (error) {
+      console.error("Action failed:", error instanceof Error ? error.message : error);
+      setFailed("NIP-94 publication failed");
+      process.exit(1);
+    }
+  }
 }
+
+// Execute
+main();

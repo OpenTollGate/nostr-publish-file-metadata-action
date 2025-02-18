@@ -23,10 +23,46 @@ export async function verifyNIP94Event() {
       let timeoutId: NodeJS.Timeout;
       let eventFound = false;
 
-      const sub = pool.sub(relays, [{
-        ids: [eventId],
-        kinds: [1063]
-      }]);
+      // Create a subscription using pool.subscribeMany()
+      const sub = pool.subscribeMany(
+        relays,
+        [
+          {
+            ids: [eventId],
+            kinds: [1063]
+          }
+        ],
+        {
+          onevent(event: NostrEvent) {
+            eventFound = true;
+            clearTimeout(timeoutId);
+            
+            try {
+              if (event.content !== expectedContent) {
+                throw new Error(`Content mismatch\nExpected: ${expectedContent}\nReceived: ${event.content}`);
+              }
+
+              const xTag = event.tags.find((t: string[]) => t[0] === 'x');
+              if (!xTag || xTag[1] !== expectedHash) {
+                throw new Error('File hash validation failed');
+              }
+
+              console.log('✅ Verification passed');
+              pool.close(relays);
+              resolve();
+            } catch (error) {
+              pool.close(relays);
+              reject(error);
+            }
+          },
+          oneose() {
+            if (!eventFound) {
+              pool.close(relays);
+              reject(new Error('Event not found on any relays'));
+            }
+          }
+        }
+      );
 
       timeoutId = setTimeout(() => {
         if (!eventFound) {
@@ -34,29 +70,6 @@ export async function verifyNIP94Event() {
           reject(new Error('Timeout waiting for event'));
         }
       }, 10000);
-
-      sub.on('event', (event: NostrEvent) => {
-        eventFound = true;
-        clearTimeout(timeoutId);
-        
-        try {
-          if (event.content !== expectedContent) {
-            throw new Error(`Content mismatch\nExpected: ${expectedContent}\nReceived: ${event.content}`);
-          }
-
-          const xTag = event.tags.find((t: string[]) => t[0] === 'x');
-          if (!xTag || xTag[1] !== expectedHash) {
-            throw new Error('File hash validation failed');
-          }
-
-          console.log('✅ Verification passed');
-          resolve();
-        } catch (error) {
-          reject(error);
-        } finally {
-          pool.close(relays);
-        }
-      });
     });
   } catch (error) {
     console.error('Verification failed:', error);
@@ -65,10 +78,11 @@ export async function verifyNIP94Event() {
   }
 }
 
-// Add this to your src/index.ts
+// Add this check for verification mode
 if (process.env.VERIFY_MODE === 'true') {
   verifyNIP94Event()
     .catch(error => {
       setFailed(error instanceof Error ? error.message : 'Verification failed');
+      process.exit(1);
     });
 }
