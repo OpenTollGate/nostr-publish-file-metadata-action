@@ -1,28 +1,34 @@
+// src/index.ts
 import { getInput, setFailed, setOutput } from "@actions/core";
 import { SimplePool, nip19 } from "nostr-tools";
 import { finalizeEvent } from "nostr-tools";
 import WebSocket from 'ws';
-(global as any).WebSocket = WebSocket;
 
-interface NIP94Inputs {
-  relays: string[];
-  url: string;
-  mimeType: string;
-  fileHash: string;
-  content: string;
-  originalHash?: string;
-  size?: number;
-  dimensions?: string;
-  nsec: Uint8Array;
+// Add proper type declarations
+declare global {
+  var WebSocket: typeof WebSocket;
 }
 
-interface PublishError extends Error {
-  relay?: string;
+// Define proper types for SimplePool
+interface RelayConnection {
+  close?: () => void;
 }
+
+interface ExtendedSimplePool extends SimplePool {
+  _relays?: {
+    [key: string]: RelayConnection;
+  };
+}
+
+global.WebSocket = WebSocket;
+
 
 async function publishNIP94Event(inputs: NIP94Inputs) {
-  const pool = new SimplePool();
+  let pool: ExtendedSimplePool | null = null;
   try {
+    console.log("Creating SimplePool...");
+    pool = new SimplePool() as ExtendedSimplePool;
+
     const tags = [
       ["url", inputs.url],
       ["m", inputs.mimeType],
@@ -40,43 +46,31 @@ async function publishNIP94Event(inputs: NIP94Inputs) {
     };
 
     const signedEvent = finalizeEvent(eventTemplate, inputs.nsec);
-
     console.log(`Publishing to ${inputs.relays.length} relays...`);
-    let publishedCount = 0;
-    
-    const publishPromises = inputs.relays.map((relay) => {
-      return new Promise<void>(async (resolve, reject) => {
+
+    // Use Promise.race for each relay with timeout
+    const results = await Promise.allSettled(
+      inputs.relays.map(async (relay) => {
         try {
-          const pub = pool.publish([relay], signedEvent);
-          const timeout = setTimeout(() => {
-            reject(new Error(`Timeout publishing to ${relay}`));
-          }, 10000);
-
-          await Promise.all(pub)
-            .then(() => {
-              clearTimeout(timeout);
-              console.log(`Published to ${relay}`);
-              publishedCount++;
-              resolve();
-            })
-            .catch((error: Error) => {
-              clearTimeout(timeout);
-              console.error(`Failed to publish to ${relay}:`, error);
-              reject(error);
-            });
-        } catch (error: unknown) {
-          reject(error instanceof Error ? error : new Error(String(error)));
+          await Promise.race([
+            pool.publish([relay], signedEvent),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error(`Publication timeout for ${relay}`)), 30000)
+            )
+          ]);
+          console.log(`Published to ${relay}`);
+          return relay;
+        } catch (error) {
+          console.error(`Failed to publish to ${relay}:`, error.message);
+          throw error;
         }
-      });
-    });
+      })
+    );
 
-    try {
-      await Promise.any(publishPromises);
-    } catch (error: unknown) {
-      console.error("Publishing error:", error);
-      if (publishedCount === 0) {
-        throw new Error("Failed to publish to any relay");
-      }
+    // Check if at least one relay succeeded
+    const successful = results.filter(r => r.status === 'fulfilled');
+    if (successful.length === 0) {
+      throw new Error("Failed to publish to any relay");
     }
 
     return {
@@ -85,7 +79,22 @@ async function publishNIP94Event(inputs: NIP94Inputs) {
       rawEvent: signedEvent,
     };
   } finally {
-    pool.close(inputs.relays);
+    if (pool) {
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        if (pool._relays) {
+          for (const relay of Object.values(pool._relays)) {
+            if (relay && typeof relay.close === 'function') {
+              await relay.close();
+            }
+          }
+        }
+        console.log("Pool cleaned up successfully");
+      } catch (closeError) {
+        console.error("Error during cleanup:", closeError);
+      }
+    }
   }
 }
 
@@ -159,8 +168,15 @@ async function main() {
   }
 }
 
-// Execute the main function
-main().catch((error) => {
-  console.error("Unhandled error:", error);
-  setFailed("Unhandled error in NIP-94 publication");
+// Add proper process handling
+process.on('unhandledRejection', (error) => {
+  console.error('Unhandled promise rejection:', error);
+  setTimeout(() => process.exit(1), 1000);
+});
+
+main().then(() => {
+  setTimeout(() => process.exit(0), 1000);
+}).catch((error) => {
+  console.error("Run failed:", error);
+  setTimeout(() => process.exit(1), 1000);
 });
