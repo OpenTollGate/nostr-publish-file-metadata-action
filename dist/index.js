@@ -41573,7 +41573,14 @@ var verifyEvent = i.verifyEvent;
 /******/ 	
 /************************************************************************/
 var __webpack_exports__ = {};
-const core = __nccwpck_require__(7484);
+let core;
+try {
+    core = __nccwpck_require__(7484);
+} catch (error) {
+    console.error('Failed to load @actions/core:', error);
+    process.exit(1);
+}
+
 const { SimplePool } = __nccwpck_require__(510);
 const { getPublicKey, finalizeEvent } = __nccwpck_require__(9810);
 const src_WebSocket = __nccwpck_require__(1354);

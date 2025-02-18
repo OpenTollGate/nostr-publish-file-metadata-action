@@ -1,4 +1,11 @@
-const core = require('@actions/core');
+let core;
+try {
+    core = require('@actions/core');
+} catch (error) {
+    console.error('Failed to load @actions/core:', error);
+    process.exit(1);
+}
+
 const { SimplePool } = require('nostr-tools');
 const { getPublicKey, finalizeEvent } = require('nostr-tools/pure');
 const WebSocket = require('ws');

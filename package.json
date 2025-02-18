@@ -21,13 +21,13 @@
   "license": "ISC",
   "dependencies": {
     "@actions/core": "^1.11.1",
-    "@vercel/ncc": "^0.38.1",
     "nostr-tools": "^2.1.4",
     "ws": "^8.14.2",
     "bufferutil": "^4.0.9",
     "utf-8-validate": "^6.0.5"
   },
   "devDependencies": {
+    "@vercel/ncc": "^0.38.1",
     "@types/node": "^20.11.19"
   },
   "engines": {
