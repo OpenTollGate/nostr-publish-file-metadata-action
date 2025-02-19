@@ -111,7 +111,7 @@ def main():
     
     # Optional inputs
     content = os.environ.get('INPUT_CONTENT', '')
-    size = int(os.environ['INPUT_SIZE']) if 'INPUT_SIZE' in os.environ else None
+    # size = int(os.environ['INPUT_SIZE']) if 'INPUT_SIZE' in os.environ else None
     dimensions = os.environ.get('INPUT_DIMENSIONS')
 
     try:
@@ -125,7 +125,7 @@ def main():
             file_hash=file_hash,
             original_hash=original_hash,
             content=content,
-            size=size,
+            # size=size,
             dimensions=dimensions
         )
 
