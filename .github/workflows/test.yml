@@ -76,7 +76,7 @@ jobs:
         timeout-minutes: 2
         uses: ./
         with:
-          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/,wss://damus.io
+          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/
           url: ${{ steps.upload.outputs.blossomUrl }}
           mimeType: text/plain
           fileHash: ${{ steps.upload.outputs.blossomHash }}
@@ -90,7 +90,7 @@ jobs:
         id: publish-retry-1
         uses: ./
         with:
-          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/,wss://damus.io
+          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/
           url: ${{ steps.upload.outputs.blossomUrl }}
           mimeType: text/plain
           fileHash: ${{ steps.upload.outputs.blossomHash }}
@@ -103,7 +103,7 @@ jobs:
         id: publish-retry-2
         uses: ./
         with:
-          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/,wss://damus.io
+          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/
           url: ${{ steps.upload.outputs.blossomUrl }}
           mimeType: text/plain
           fileHash: ${{ steps.upload.outputs.blossomHash }}
