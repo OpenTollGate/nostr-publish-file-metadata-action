@@ -14,9 +14,54 @@ const { nip19 } = require('nostr-tools');
 // Simple WebSocket global assignment
 global.WebSocket = WebSocket;
 
+// Add this function at the top level
+function validateNIP94Input(inputs) {
+  const requiredFields = {
+    url: 'URL is required for NIP-94',
+    mimeType: 'MIME type is required for NIP-94',
+    fileHash: 'File hash (SHA-256) is required for NIP-94'
+  };
+
+  const missingFields = [];
+  for (const [field, message] of Object.entries(requiredFields)) {
+    if (!inputs[field]) {
+      missingFields.push(message);
+    }
+  }
+
+  if (missingFields.length > 0) {
+    throw new Error(`Invalid NIP-94 input: ${missingFields.join(', ')}`);
+  }
+
+  // Validate MIME type format
+  if (!/^[a-z]+\/[a-z0-9.+-]+$/.test(inputs.mimeType.toLowerCase())) {
+    throw new Error('Invalid MIME type format');
+  }
+
+  // Validate SHA-256 hash format
+  if (!/^[a-f0-9]{64}$/i.test(inputs.fileHash)) {
+    throw new Error('Invalid file hash format: must be a 64-character hex string');
+  }
+
+  // Validate URL format
+  try {
+    new URL(inputs.url);
+  } catch (e) {
+    throw new Error('Invalid URL format');
+  }
+
+  return {
+    ...inputs,
+    mimeType: inputs.mimeType.toLowerCase(), // Ensure lowercase MIME type
+  };
+}
+
 async function publishNIP94Event(inputs) {
   let pool = null;
   try {
+    // Validate inputs before proceeding
+    inputs = validateNIP94Input(inputs);
+
     console.log("Creating SimplePool...");
     pool = new SimplePool({
       eoseSubTimeout: 10000,
@@ -38,24 +83,45 @@ async function publishNIP94Event(inputs) {
       ["url", inputs.url],
       ["m", inputs.mimeType],
       ["x", inputs.fileHash],
+    ];
+
+    // Add optional tags
+    const optionalTags = [
       ...(inputs.originalHash ? [["ox", inputs.originalHash]] : []),
       ...(inputs.size ? [["size", inputs.size.toString()]] : []),
       ...(inputs.dimensions ? [["dim", inputs.dimensions]] : []),
     ];
 
+    const tags = [...mandatoryTags, ...optionalTags];
+
+    // Verify all required tags are present
+    const requiredTags = ['url', 'm', 'x'];
+    const missingTags = requiredTags.filter(t => !tags.some(([name]) => name === t));
+    if (missingTags.length > 0) {
+      throw new Error(`Missing required NIP-94 tags: ${missingTags.join(', ')}`);
+    }
+
     const eventTemplate = {
       kind: 1063,
       created_at: Math.floor(Date.now() / 1000),
       tags,
-      content: inputs.content,
+      content: inputs.content || '', // Ensure content is never undefined
     };
 
     const signedEvent = finalizeEvent(eventTemplate, inputs.nsec);
+
+    // Validate the signed event
+    if (!signedEvent.sig || signedEvent.sig.length !== 128 || !/^[0-9a-f]{128}$/i.test(signedEvent.sig)) {
+      throw new Error('Invalid event signature');
+    }
+
+    // Log the complete event for debugging
     console.log("Event created:", {
       id: signedEvent.id,
       kind: signedEvent.kind,
       created_at: signedEvent.created_at,
-      tagCount: signedEvent.tags.length
+      tagCount: signedEvent.tags.length,
+      tags: signedEvent.tags // Add this for better debugging
     });
 
     console.log(`Publishing to ${inputs.relays.length} relays...`);
