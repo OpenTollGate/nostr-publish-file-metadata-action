@@ -137,25 +137,39 @@ async function publishNIP94Event(inputs) {
 
 	console.log(`Publishing to ${inputs.relays.length} relays...`);
 
+	// Replace the existing publication code with this version
 	const results = await Promise.allSettled(
 	    inputs.relays.map(async (relay) => {
 		try {
 		    const relayInstance = await pool.ensureRelay(relay);
-		    // Add websocket event listeners
-		    relayInstance.on('error', (error) => 
-			console.error(`Relay ${relay} error:`, error));
-		    relayInstance.on('notice', (notice) => 
-			console.warn(`Relay ${relay} notice:`, notice));
+		    
+		    const pub = await new Promise((resolve, reject) => {
+			const timeout = setTimeout(() => 
+			    reject(new Error(`Publication timeout for ${relay}`)), 30000
+			);
 
-		    const pub = await Promise.race([
-			relayInstance.publish(signedEvent).catch(e => {
-			    console.error(`Internal publish error for ${relay}:`, e);
-			    throw e;
-			}),
-			new Promise((_, reject) => 
-			    setTimeout(() => reject(new Error(`Publication timeout for ${relay}`)), 30000)
-			)
-		    ]);
+			relayInstance.on('ok', (okMsg) => {
+			    clearTimeout(timeout);
+			    if (okMsg[2]) {
+				console.log(`Relay ${relay} accepted event: ${okMsg[3]}`);
+				resolve(true);
+			    } else {
+				reject(new Error(`Relay ${relay} rejected: ${okMsg[3]}`));
+			    }
+			});
+
+			relayInstance.on('error', (error) => {
+			    console.error(`Relay ${relay} error:`, error);
+			    reject(error);
+			});
+
+			relayInstance.on('notice', (notice) => {
+			    console.warn(`Relay ${relay} notice:`, notice);
+			});
+
+			relayInstance.publish(signedEvent).catch(reject);
+		    });
+
 		    console.log(`Published to ${relay}`, pub);
 		    return relay;
 		} catch (error) {
