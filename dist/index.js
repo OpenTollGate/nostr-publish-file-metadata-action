@@ -41589,9 +41589,60 @@ const { nip19 } = __nccwpck_require__(510);
 // Simple WebSocket global assignment
 global.WebSocket = src_WebSocket;
 
+// Add this function at the top level
+function validateNIP94Input(inputs) {
+  const requiredFields = {
+    url: 'URL is required for NIP-94',
+    mimeType: 'MIME type is required for NIP-94',
+    fileHash: 'File hash (SHA-256) is required for NIP-94',
+    originalHash: 'Original file hash (SHA-256) is required for NIP-94'
+  };
+
+  const missingFields = [];
+  for (const [field, message] of Object.entries(requiredFields)) {
+    if (!inputs[field]) {
+      missingFields.push(message);
+    }
+  }
+
+  if (missingFields.length > 0) {
+    throw new Error(`Invalid NIP-94 input: ${missingFields.join(', ')}`);
+  }
+
+  // Validate MIME type format
+  if (!/^[a-z]+\/[a-z0-9.+-]+$/.test(inputs.mimeType.toLowerCase())) {
+    throw new Error('Invalid MIME type format');
+  }
+
+  // Validate SHA-256 hash formats
+  const validateHash = (hash, field) => {
+    if (!/^[a-f0-9]{64}$/i.test(hash)) {
+      throw new Error(`Invalid ${field} hash format: must be a 64-character hex string`);
+    }
+  };
+
+  validateHash(inputs.fileHash, 'file');
+  validateHash(inputs.originalHash, 'original file');
+
+  // Validate URL format
+  try {
+    new URL(inputs.url);
+  } catch (e) {
+    throw new Error('Invalid URL format');
+  }
+
+  return {
+    ...inputs,
+    mimeType: inputs.mimeType.toLowerCase(), // Ensure lowercase MIME type
+  };
+}
+
 async function publishNIP94Event(inputs) {
   let pool = null;
   try {
+    // Validate inputs before proceeding
+    inputs = validateNIP94Input(inputs);
+
     console.log("Creating SimplePool...");
     pool = new SimplePool({
       eoseSubTimeout: 10000,
@@ -41609,28 +41660,50 @@ async function publishNIP94Event(inputs) {
       }
     }
 
-    const tags = [
+    // Create tags with ALL mandatory fields
+    const mandatoryTags = [
       ["url", inputs.url],
       ["m", inputs.mimeType],
       ["x", inputs.fileHash],
-      ...(inputs.originalHash ? [["ox", inputs.originalHash]] : []),
+      ["ox", inputs.originalHash],
+    ];
+
+    // Add optional tags
+    const optionalTags = [
       ...(inputs.size ? [["size", inputs.size.toString()]] : []),
       ...(inputs.dimensions ? [["dim", inputs.dimensions]] : []),
     ];
+
+    const tags = [...mandatoryTags, ...optionalTags];
+
+    // Verify all required tags are present
+    const requiredTags = ['url', 'm', 'x', 'ox'];
+    const missingTags = requiredTags.filter(t => !tags.some(([name]) => name === t));
+    if (missingTags.length > 0) {
+      throw new Error(`Missing required NIP-94 tags: ${missingTags.join(', ')}`);
+    }
 
     const eventTemplate = {
       kind: 1063,
       created_at: Math.floor(Date.now() / 1000),
       tags,
-      content: inputs.content,
+      content: inputs.content || '', // Ensure content is never undefined
     };
 
     const signedEvent = finalizeEvent(eventTemplate, inputs.nsec);
+
+    // Validate the signed event
+    if (!signedEvent.sig || signedEvent.sig.length !== 128 || !/^[0-9a-f]{128}$/i.test(signedEvent.sig)) {
+      throw new Error('Invalid event signature');
+    }
+
+    // Log the complete event for debugging
     console.log("Event created:", {
       id: signedEvent.id,
       kind: signedEvent.kind,
       created_at: signedEvent.created_at,
-      tagCount: signedEvent.tags.length
+      tagCount: signedEvent.tags.length,
+      tags: signedEvent.tags // Add this for better debugging
     });
 
     console.log(`Publishing to ${inputs.relays.length} relays...`);
@@ -41638,8 +41711,9 @@ async function publishNIP94Event(inputs) {
     const results = await Promise.allSettled(
       inputs.relays.map(async (relay) => {
         try {
+          const relayInstance = await pool.ensureRelay(relay);
           const pub = await Promise.race([
-            pool.publish([relay], signedEvent).catch(e => {
+            relayInstance.publish(signedEvent).catch(e => {
               console.error(`Internal publish error for ${relay}:`, e);
               throw e;
             }),
@@ -41674,21 +41748,21 @@ async function publishNIP94Event(inputs) {
   } finally {
     if (pool) {
       try {
-        // Increased delay to ensure all operations complete
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
         if (pool._relays) {
-          for (const [_, relay] of Object.entries(pool._relays)) {
-            if (relay && typeof relay.close === 'function') {
-              try {
-                await relay.close();
-                console.log(`Closed connection to relay`);
-              } catch (closeError) {
-                console.error(`Error closing relay connection:`, closeError);
+          await Promise.all(
+            Object.values(pool._relays).map(async (relay) => {
+              if (relay && typeof relay.close === 'function') {
+                try {
+                  relay.close();
+                } catch (closeError) {
+                  console.error(`Error closing relay connection:`, closeError);
+                }
               }
-            }
-          }
+            })
+          );
         }
+        // Force cleanup of the pool
+        pool = null;
         console.log("Pool cleaned up successfully");
       } catch (closeError) {
         console.error("Error during cleanup:", closeError);
@@ -41700,12 +41774,17 @@ async function publishNIP94Event(inputs) {
 async function main() {
   try {
     console.log("Starting main function...");
-    const relays = core.getInput("relays").split(",");
-    const url = core.getInput("url");
-    const mimeType = core.getInput("mimeType");
-    const fileHash = core.getInput("fileHash");
+    
+    // Get and validate required inputs first
+    const required = ['relays', 'url', 'mimeType', 'fileHash', 'originalHash', 'nsec'];
+    for (const input of required) {
+      const value = core.getInput(input);
+      if (!value) {
+        throw new Error(`Required input '${input}' is missing`);
+      }
+    }
+
     const content = core.getInput("content");
-    const nsecInput = core.getInput("nsec");
     let nsecBytes;
 
     console.log("Validating inputs...");
@@ -41750,7 +41829,7 @@ async function main() {
       fileHash,
       content,
       nsec: nsecBytes,
-      originalHash: core.getInput("originalHash") || undefined,
+      originalHash: core.getInput("originalHash"),
       size: Number(core.getInput("size")) || undefined,
       dimensions: core.getInput("dimensions") || undefined,
     };
@@ -41765,12 +41844,22 @@ async function main() {
 - https://snort.social/e/${result.noteId}
 - https://primal.net/e/${result.eventId}`);
 
+    // Add explicit exit
+    process.exit(0);
+
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("Action failed:", errorMessage);
     core.setFailed(error.message);
+    process.exit(1);
   }
 }
+
+// Modify the main execution to handle any unhandled rejections
+process.on('unhandledRejection', (error) => {
+  console.error('Unhandled Rejection:', error);
+  process.exit(1);
+});
 
 main().catch(error => {
   console.error("Unhandled error in main:", error);

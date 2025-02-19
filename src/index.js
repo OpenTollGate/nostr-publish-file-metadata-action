@@ -19,7 +19,8 @@ function validateNIP94Input(inputs) {
   const requiredFields = {
     url: 'URL is required for NIP-94',
     mimeType: 'MIME type is required for NIP-94',
-    fileHash: 'File hash (SHA-256) is required for NIP-94'
+    fileHash: 'File hash (SHA-256) is required for NIP-94',
+    originalHash: 'Original file hash (SHA-256) is required for NIP-94'
   };
 
   const missingFields = [];
@@ -38,10 +39,15 @@ function validateNIP94Input(inputs) {
     throw new Error('Invalid MIME type format');
   }
 
-  // Validate SHA-256 hash format
-  if (!/^[a-f0-9]{64}$/i.test(inputs.fileHash)) {
-    throw new Error('Invalid file hash format: must be a 64-character hex string');
-  }
+  // Validate SHA-256 hash formats
+  const validateHash = (hash, field) => {
+    if (!/^[a-f0-9]{64}$/i.test(hash)) {
+      throw new Error(`Invalid ${field} hash format: must be a 64-character hex string`);
+    }
+  };
+
+  validateHash(inputs.fileHash, 'file');
+  validateHash(inputs.originalHash, 'original file');
 
   // Validate URL format
   try {
@@ -79,15 +85,16 @@ async function publishNIP94Event(inputs) {
       }
     }
 
-    const tags = [
+    // Create tags with ALL mandatory fields
+    const mandatoryTags = [
       ["url", inputs.url],
       ["m", inputs.mimeType],
       ["x", inputs.fileHash],
+      ["ox", inputs.originalHash],
     ];
 
     // Add optional tags
     const optionalTags = [
-      ...(inputs.originalHash ? [["ox", inputs.originalHash]] : []),
       ...(inputs.size ? [["size", inputs.size.toString()]] : []),
       ...(inputs.dimensions ? [["dim", inputs.dimensions]] : []),
     ];
@@ -95,7 +102,7 @@ async function publishNIP94Event(inputs) {
     const tags = [...mandatoryTags, ...optionalTags];
 
     // Verify all required tags are present
-    const requiredTags = ['url', 'm', 'x'];
+    const requiredTags = ['url', 'm', 'x', 'ox'];
     const missingTags = requiredTags.filter(t => !tags.some(([name]) => name === t));
     if (missingTags.length > 0) {
       throw new Error(`Missing required NIP-94 tags: ${missingTags.join(', ')}`);
@@ -192,12 +199,17 @@ async function publishNIP94Event(inputs) {
 async function main() {
   try {
     console.log("Starting main function...");
-    const relays = core.getInput("relays").split(",");
-    const url = core.getInput("url");
-    const mimeType = core.getInput("mimeType");
-    const fileHash = core.getInput("fileHash");
+    
+    // Get and validate required inputs first
+    const required = ['relays', 'url', 'mimeType', 'fileHash', 'originalHash', 'nsec'];
+    for (const input of required) {
+      const value = core.getInput(input);
+      if (!value) {
+        throw new Error(`Required input '${input}' is missing`);
+      }
+    }
+
     const content = core.getInput("content");
-    const nsecInput = core.getInput("nsec");
     let nsecBytes;
 
     console.log("Validating inputs...");
@@ -242,7 +254,7 @@ async function main() {
       fileHash,
       content,
       nsec: nsecBytes,
-      originalHash: core.getInput("originalHash") || undefined,
+      originalHash: core.getInput("originalHash"),
       size: Number(core.getInput("size")) || undefined,
       dimensions: core.getInput("dimensions") || undefined,
     };
