@@ -151,6 +151,8 @@ def main():
             dimensions=dimensions
         )
 
+        print("event: ", str(event))
+
         # Publish event
         results = publisher.publish_event(event)
         
