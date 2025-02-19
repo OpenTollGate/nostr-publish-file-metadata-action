@@ -41644,9 +41644,12 @@ async function publishNIP94Event(inputs) {
     inputs = validateNIP94Input(inputs);
 
     console.log("Creating SimplePool...");
+    // Add to your SimplePool initialization
     pool = new SimplePool({
       eoseSubTimeout: 10000,
       getTimeout: 10000,
+      logDebug: (msg) => console.debug(`[Nostr] ${msg}`),
+      logError: (msg) => console.error(`[Nostr] ${msg}`)
     });
 
     // Verify relay connections first
@@ -41659,6 +41662,12 @@ async function publishNIP94Event(inputs) {
         console.error(`Failed to connect to ${relay}:`, error);
       }
     }
+
+    // Add websocket event listeners
+    relayInstance.on('error', (error) => 
+      console.error(`Relay ${relay} error:`, error));
+    relayInstance.on('notice', (notice) => 
+      console.warn(`Relay ${relay} notice:`, notice));
 
     // Create tags with ALL mandatory fields
     const mandatoryTags = [
