@@ -110,3 +110,21 @@ jobs:
           content: "Test file uploaded via GitHub Actions"
           nsec: ${{ secrets.NSEC }}
           size: ${{ steps.upload.outputs.size }}
+
+      - name: Verify Event Publication
+        run: |
+          EVENT_ID="${{ steps.publish.outputs.eventId }}"
+          RELAYS=("wss://relay.damus.io" "wss://nos.lol" "wss://nostr.mom")
+          
+          npm install -g wscat
+          
+          for relay in "${RELAYS[@]}"; do
+            echo "Checking $relay for event..."
+            echo '["REQ", "verify", {"ids":["'$EVENT_ID'"]}]' | wscat -c "$relay" -w 5 | grep -q "$EVENT_ID" && {
+              echo "Event found on $relay"
+              exit 0
+            }
+          done
+          
+          echo "Event not found on any relay"
+          exit 1
