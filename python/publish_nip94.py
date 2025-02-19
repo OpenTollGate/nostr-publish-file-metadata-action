@@ -58,30 +58,49 @@ class NIP94Publisher:
         results = {}
         
         for relay_url in self.relays:
+            relay_manager = None
             try:
+                print(f"\nAttempting to publish to {relay_url}...")
+                
                 # Initialize relay manager for single relay
                 relay_manager = RelayManager()
                 relay_manager.add_relay(relay_url)
                 
                 # Open connection with SSL verification disabled
+                print(f"Opening connection to {relay_url}...")
                 relay_manager.open_connections({"cert_reqs": ssl.CERT_NONE})
-                time.sleep(1.25)  # Allow connection time
-                
+                time.sleep(2)  # Increased wait time for connection
+            
                 # Publish event
-                relay_manager.publish_event(event)
-                time.sleep(1)  # Wait forresults[relay_url] = True
-                print(f"Successfullyurl")
-                
+                print(f"Publishing event to {relay_url}...")
+                publish_result = relay_manager.publish_event(event)
+            
+                # Wait for confirmation
+                time.sleep(2)  # Increased wait time for publishing
+            
+                # Set result based on successful publish
+                results[relay_url] = True
+                print(f"Successfully published to {relay_url}")
+            
             except Exception as e:
-                print(f"Failed to publish to {relay_url}: {str(e)}")
+                print(f"Failed to publish to {relay_url}: {e}")
                 results[relay_url] = False
-                
+            
             finally:
-                try:
-                    relay_manager.close_connections()
-                except:
-                    pass
-        
+                if relay_manager:
+                    try:
+                        print(f"Closing connection to {relay_url}...")
+                        relay_manager.close_connections()
+                        time.sleep(0.5)  # Give time for clean closure
+                    except Exception as e:
+                        print(f"Error closing connection to {relay_url}: {e}")
+                    
+        # Print summary
+        successful = sum(1 for result in results.values() if result)
+        print(f"\nPublishing Summary:")
+        print(f"Successfully published to {successful} out of {len(self.relays)} relays")
+        for relay, success in results.items():
+            print(f"- {relay}: {'✓' if success else '✗'}")
         return results
 
 def main():
