@@ -214,11 +214,11 @@ async function main() {
 
     console.log("Validating inputs...");
     try {
-      if (!nsecInput) {
+      if (!nsec) {
         throw new Error("nsec input is required");
       }
 
-      const cleanNsec = nsecInput.trim();
+      const cleanNsec = nsec.trim();
 
       if (cleanNsec.startsWith('nsec1')) {
         console.log("Processing bech32 nsec...");
