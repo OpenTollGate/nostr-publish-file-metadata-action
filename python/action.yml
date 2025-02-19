@@ -1,0 +1,63 @@
+# python/action.yml
+name: 'NIP-94 Metadata Publisher (Python)'
+description: 'Publishes NIP-94 file metadata events to Nostr using Python'
+inputs:
+  relays:
+    description: 'Comma-separated list of Nostr relays'
+    required: true
+  url:
+    description: 'URL to download the file'
+    required: true
+  mimeType:
+    description: 'MIME type of the file'
+    required: true
+  fileHash:
+    description: 'SHA-256 hash of the file'
+    required: true
+  originalHash:
+    description: 'SHA-256 hash of the original file before any transformations'
+    required: true
+  nsec:
+    description: 'Nostr private key'
+    required: true
+  size:
+    description: 'File size in bytes (optional)'
+    required: false
+  dimensions:
+    description: 'Image/video dimensions in WxH format (optional)'
+    required: false
+  content:
+    description: 'Description of the file content'
+    required: false
+outputs:
+  eventId:
+    description: 'Raw Nostr event ID'
+  noteId:
+    description: 'Bech32-encoded note ID (note1...)'
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+    
+    - name: Install dependencies
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install nostr
+
+    - name: Run publisher
+      shell: bash
+      env:
+        INPUT_RELAYS: ${{ inputs.relays }}
+        INPUT_URL: ${{ inputs.url }}
+        INPUT_MIMETYPE: ${{ inputs.mimeType }}
+        INPUT_FILEHASH: ${{ inputs.fileHash }}
+        INPUT_ORIGINALHASH: ${{ inputs.originalHash }}
+        INPUT_NSEC: ${{ inputs.nsec }}
+        INPUT_CONTENT: ${{ inputs.content }}
+        INPUT_SIZE: ${{ inputs.size }}
+        INPUT_DIMENSIONS: ${{ inputs.dimensions }}
+      run: python ${{ github.action_path }}/publish_nip94.py

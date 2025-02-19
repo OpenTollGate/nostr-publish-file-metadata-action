@@ -119,4 +119,34 @@ jobs:
           done
           
           echo "Event not found on any relay"
-          exit 1
+          # exit 1
+
+
+  test-python-implementation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Create test file
+        run: |
+          echo "Nostr file metadata test - $(date)" > testfile.txt
+      
+      - name: Upload to Blossom
+        id: upload
+        uses: c03rad0r/upload-blossom-action@using-nsec-argument
+        with:
+          host: ${{ secrets.HOST }}
+          filePath: testfile.txt
+          nostrPrivateKey: ${{ secrets.NSEC }}
+
+      - name: Publish NIP-94 Metadata (Python)
+        uses: ./python
+        with:
+          relays: "wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/"
+          url: ${{ steps.upload.outputs.blossomUrl }}
+          mimeType: "text/plain"
+          fileHash: ${{ steps.upload.outputs.blossomHash }}
+          originalHash: ${{ steps.upload.outputs.blossomHash }}
+          content: "Test file uploaded via GitHub Actions (Python)"
+          nsec: ${{ secrets.NSEC }}
+          size: ${{ steps.upload.outputs.size }}

@@ -1,5 +1,84 @@
-# Create NIP-94 for file (Action)
-This action enables you to create a NIP-94 event for a file that you previously [uploaded to blossom](https://gitworkshop.dev/r/naddr1qvzqqqrhnypzpwa4mkswz4t8j70s2s6q00wzqv7k7zamxrmj2y4fs88aktcfuf68qy2hwumn8ghj7un9d3shjtnyv9kh2uewd9hj7qgwwaehxw309ahx7uewd3hkctcpzamhxue69uhhyetvv9ujumn0wd68ytnzv9hxgtcpz4mhxue69uhhyetvv9ujuerpd46hxtnfduhsq9t4wpkx7cty943xcmmnwdhk6ttpvd6xjmmw8kl5gl/proposals).
+# Nostr NIP-94 Publisher Action
+
+This repository provides two implementations of a GitHub Action for publishing NIP-94 file metadata to Nostr relays:
+
+## JavaScript Implementation (Original)
+
+```yaml
+- name: Publish NIP-94 Metadata
+  uses: your-username/nostr-publish-file-metadata-action/js@main
+  with:
+    relays: "wss://relay.damus.io,wss://nos.lol"
+    url: "https://example.com/file.txt"
+    mimeType: "text/plain"
+    fileHash: "sha256hash..."
+    originalHash: "sha256hash..."
+    nsec: ${{ secrets.NSEC }}
+```
+
+## Python Implementation (Alternative)
+
+```yaml
+- name: Publish NIP-94 Metadata
+  uses: your-username/nostr-publish-file-metadata-action/python@main
+  with:
+    relays: "wss://relay.damus.io,wss://nos.lol"
+    url: "https://example.com/file.txt"
+    mimeType: "text/plain"
+    fileHash: "sha256hash..."
+    originalHash: "sha256hash..."
+    nsec: ${{ secrets.NSEC }}
+```
+
+Choose the implementation that best suits your needs. Both provide identical functionality but I currently can't find the events that the javascript verison publishes on the relays.
+```
+
+And finally, you could modify your test workflow to test both implementations:
+
+```yaml
+# .github/workflows/test.yml
+name: Test NIP-94 Publishing
+on: [push, pull_request]
+
+jobs:
+  test-js-implementation:
+    runs-on: ubuntu-latest
+    steps:
+      # ... your existing JavaScript implementation test ...
+
+  test-python-implementation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Create test file
+        run: |
+          echo "Nostr file metadata test - $(date)" > testfile.txt
+      
+      - name: Upload to Blossom
+        id: upload
+        uses: c03rad0r/upload-blossom-action@using-nsec-argument
+        with:
+          host: ${{ secrets.HOST }}
+          filePath: testfile.txt
+          nostrPrivateKey: ${{ secrets.NSEC }}
+
+      - name: Publish NIP-94 Metadata (Python)
+        uses: ./python
+        with:
+          relays: "wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/"
+          url: ${{ steps.upload.outputs.blossomUrl }}
+          mimeType: "text/plain"
+          fileHash: ${{ steps.upload.outputs.blossomHash }}
+          originalHash: ${{ steps.upload.outputs.blossomHash }}
+          content: "Test file uploaded via GitHub Actions (Python)"
+          nsec: ${{ secrets.NSEC }}
+          size: ${{ steps.upload.outputs.size }}
+```
+
+This approach gives users choice while maintaining backward compatibility and provides a good path for testing and potentially migrating to the Python implementation if it proves more reliable.
+
+
 
 ## Issues / Contributions
 We use nostr to manage issues and pull requests for this repository.
