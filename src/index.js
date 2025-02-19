@@ -63,8 +63,9 @@ async function publishNIP94Event(inputs) {
     const results = await Promise.allSettled(
       inputs.relays.map(async (relay) => {
         try {
+          const relayInstance = await pool.ensureRelay(relay);
           const pub = await Promise.race([
-            pool.publish([relay], signedEvent).catch(e => {
+            relayInstance.publish(signedEvent).catch(e => {
               console.error(`Internal publish error for ${relay}:`, e);
               throw e;
             }),
