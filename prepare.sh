@@ -1,5 +1,9 @@
-# Clean and reinstall
-rm -rf node_modules/ package-lock.json
+# Clean
+rm -rf node_modules
+rm -rf dist
+rm package-lock.json
+
+# Reinstall
 npm install
 
 # Now rebuild
