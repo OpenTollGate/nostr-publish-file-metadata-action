@@ -62,12 +62,14 @@ jobs:
       - name: Publish NIP-94 Metadata
         continue-on-error: true
         id: publish
+        timeout-minutes: 2
         uses: ./
         with:
-          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/,wss://orangesync.tech,wss://damus.io,wss://nostr.land
+          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/
           url: ${{ steps.upload.outputs.blossomUrl }}
           mimeType: text/plain
           fileHash: ${{ steps.upload.outputs.blossomHash }}
+          originalHash: ${{ steps.upload.outputs.blossomHash }}
           content: "Test file uploaded via GitHub Actions"
           nsec: ${{ secrets.NSEC }}
           size: ${{ steps.upload.outputs.size }}
@@ -78,10 +80,11 @@ jobs:
         id: publish-retry-1
         uses: ./
         with:
-          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/,wss://orangesync.tech,wss://damus.io,wss://nostr.land
+          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/
           url: ${{ steps.upload.outputs.blossomUrl }}
           mimeType: text/plain
           fileHash: ${{ steps.upload.outputs.blossomHash }}
+          originalHash: ${{ steps.upload.outputs.blossomHash }}
           content: "Test file uploaded via GitHub Actions"
           nsec: ${{ secrets.NSEC }}
           size: ${{ steps.upload.outputs.size }}
@@ -91,10 +94,29 @@ jobs:
         id: publish-retry-2
         uses: ./
         with:
-          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/,wss://orangesync.tech,wss://damus.io,wss://nostr.land
+          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/
           url: ${{ steps.upload.outputs.blossomUrl }}
           mimeType: text/plain
           fileHash: ${{ steps.upload.outputs.blossomHash }}
+          originalHash: ${{ steps.upload.outputs.blossomHash }}
           content: "Test file uploaded via GitHub Actions"
           nsec: ${{ secrets.NSEC }}
           size: ${{ steps.upload.outputs.size }}
+
+      - name: Verify Event Publication
+        run: |
+          EVENT_ID="${{ steps.publish.outputs.eventId }}"
+          RELAYS=("wss://relay.damus.io" "wss://nos.lol" "wss://nostr.mom")
+          
+          npm install -g wscat
+          
+          for relay in "${RELAYS[@]}"; do
+            echo "Checking $relay for event..."
+            echo '["REQ", "verify", {"ids":["'$EVENT_ID'"]}]' | wscat -c "$relay" -w 5 | grep -q "$EVENT_ID" && {
+              echo "Event found on $relay"
+              exit 0
+            }
+          done
+          
+          echo "Event not found on any relay"
+          exit 1
