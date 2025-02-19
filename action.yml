@@ -25,6 +25,9 @@ inputs:
   dimensions:
     description: 'Image/video dimensions in WxH format (optional)'
     required: false
+  content:
+    description: 'Description of the file content'
+    required: false
 outputs:
   eventId:
     description: 'Raw Nostr event ID'
