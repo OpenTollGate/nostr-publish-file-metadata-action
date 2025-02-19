@@ -209,30 +209,30 @@ async function main() {
       }
     }
 
+    // Get all inputs at once
+    const relays = core.getInput("relays").split(",");
+    const url = core.getInput("url");
+    const mimeType = core.getInput("mimeType");
+    const fileHash = core.getInput("fileHash");
+    const originalHash = core.getInput("originalHash");
     const content = core.getInput("content");
+    const nsecInput = core.getInput("nsec");
+
+    // Simplified nsec validation
     let nsecBytes;
 
     console.log("Validating inputs...");
     try {
-      if (!nsec) {
-        throw new Error("nsec input is required");
-      }
-
-      const cleanNsec = nsec.trim();
-
+      const cleanNsec = nsecInput.trim().replace('0x', '');
+      
       if (cleanNsec.startsWith('nsec1')) {
         console.log("Processing bech32 nsec...");
         const decoded = nip19.decode(cleanNsec);
         nsecBytes = new Uint8Array(Buffer.from(decoded.data, 'hex'));
+      } else if (/^[0-9a-fA-F]{64}$/.test(cleanNsec)) {
+        nsecBytes = new Uint8Array(Buffer.from(cleanNsec, 'hex'));
       } else {
-        console.log("Processing hex nsec...");
-        const hexString = cleanNsec.replace('0x', '');
-        
-        if (!/^[0-9a-fA-F]{64}$/.test(hexString)) {
-          throw new Error("Invalid hex format: must be 64 characters long and contain only hex characters");
-        }
-        
-        nsecBytes = new Uint8Array(Buffer.from(hexString, 'hex'));
+        throw new Error("Invalid nsec format: must be either nsec1 or 64-character hex string");
       }
 
       if (nsecBytes.length !== 32) {
@@ -243,7 +243,6 @@ async function main() {
       throw new Error(`Failed to process nsec: ${error.message}`);
     }
 
-    const originalHash = core.getInput("originalHash");
     const size = core.getInput("size");
     const dimensions = core.getInput("dimensions");
 
@@ -252,9 +251,9 @@ async function main() {
       url,
       mimeType,
       fileHash,
+      originalHash,
       content,
       nsec: nsecBytes,
-      originalHash: core.getInput("originalHash"),
       size: Number(core.getInput("size")) || undefined,
       dimensions: core.getInput("dimensions") || undefined,
     };
@@ -269,7 +268,6 @@ async function main() {
 - https://snort.social/e/${result.noteId}
 - https://primal.net/e/${result.eventId}`);
 
-    // Add explicit exit
     process.exit(0);
 
   } catch (error) {
