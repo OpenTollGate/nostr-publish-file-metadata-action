@@ -73,6 +73,7 @@ jobs:
       - name: Publish NIP-94 Metadata
         continue-on-error: true
         id: publish
+        timeout-minutes: 2
         uses: ./
         with:
           relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/,wss://damus.io
