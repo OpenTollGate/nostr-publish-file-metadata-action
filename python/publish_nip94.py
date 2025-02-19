@@ -70,7 +70,7 @@ class NIP94Publisher:
                 # Publish event
                 relay_manager.publish_event(event)
                 time.sleep(1)  # Wait forresults[relay_url] = True
-                print(f"Successfullyurl}")
+                print(f"Successfullyurl")
                 
             except Exception as e:
                 print(f"Failed to publish to {relay_url}: {str(e)}")
