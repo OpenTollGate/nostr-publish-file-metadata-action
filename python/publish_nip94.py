@@ -14,18 +14,15 @@ class NIP94Publisher:
     def __init__(self, relays: List[str], private_key_hex: str):
         self.relays = relays
         self.private_key = PrivateKey(bytes.fromhex(private_key_hex))
+        print(f"Initialized with {len(relays)} relays")
 
-    def create_nip94_event(
-        self,
-        url: str,
-        mime_type: str,
-        file_hash: str,
-        original_hash: str,
-        content: str = "",
-        size: Optional[int] = None,
-        dimensions: Optional[str] = None
-    ) -> Event:
+    def create_nip94_event(self, url: str, mime_type: str, file_hash: str,
+                          original_hash: str, content: str = "",
+                          size: Optional[int] = None,
+                          dimensions: Optional[str] = None) -> Event:
         """Create a NIP-94 event with the required metadata"""
+        
+        print("Creating NIP-94 event...")
         
         # Mandatory tags
         tags = [
@@ -51,6 +48,12 @@ class NIP94Publisher:
         
         # Sign the event
         self.private_key.sign_event(event)
+        
+        print(f"Event created successfully:")
+        print(f"- ID: {event.id}")
+        print(f"- Kind: {event.kind}")
+        print(f"- Tags: {len(tags)}")
+        
         return event
 
     def publish_event(self, event: Event) -> Dict[str, bool]:
@@ -157,17 +160,20 @@ def main():
             print(f"noteId=note1{event.id}", file=fh)
         
         # Check if we had at least one successful publish
-        if not any(results.values()):
+        successful_publishes = sum(1 for result in results.values() if result)
+        if successful_publishes == 0:
             print("::error::Failed to publish to any relay")
             sys.exit(1)
-            
-        print(f"Event published successfully: {event.id}")
-        print("View on:")
-        print(f"- https://snort.social/e/note1{event.id}")
-        print(f"- https://primal.net/e/{event.id}")
+        else:
+            print(f"\nSuccessfully published to {successful_publishes} relays")
+            print(f"Event ID: {event.id}")
+            print("View on:")
+            print(f"- https://snort.social/e/note1{event.id}")
+            print(f"- https://primal.net/e/{event.id}")
 
     except Exception as e:
         print(f"::error::Failed to publish NIP-94 event: {str(e)}")
+        traceback.print_exc()  # Print full stack trace
         sys.exit(1)
 
 if __name__ == "__main__":
