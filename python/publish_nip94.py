@@ -151,7 +151,16 @@ def main():
             dimensions=dimensions
         )
 
-        print("event: ", str(event))
+        event_dict = {
+            "id": event.id,
+            "pubkey": event.public_key,
+            "created_at": event.created_at,
+            "kind": event.kind,
+            "tags": event.tags,
+            "content": event.content,
+            "sig": event.sig
+        }
+        print("event: ", json.dumps(event_dict, indent=2))
 
         # Publish event
         results = publisher.publish_event(event)
