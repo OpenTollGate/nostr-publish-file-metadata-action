@@ -15,21 +15,23 @@ jobs:
         run: |
           echo "Nostr file metadata test - $(date)" > testfile.txt
       
-      # Add step to install dependencies and build
+      # Update working directory for JS implementation
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20'
 
       - name: Install dependencies
+        working-directory: ./js
         run: npm install
 
       - name: Build
+        working-directory: ./js
         run: npm run build
 
       # Add step to make the script executable
       - name: Make script executable
-        run: chmod +x dist/index.js
+        run: chmod +x js/dist/index.js
       
       - name: Upload to Blossom
         id: upload
@@ -63,7 +65,7 @@ jobs:
         continue-on-error: true
         id: publish
         timeout-minutes: 2
-        uses: ./
+        uses: ./js
         with:
           relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/
           url: ${{ steps.upload.outputs.blossomUrl }}
@@ -78,7 +80,7 @@ jobs:
         if: steps.publish.outcome == 'failure'
         continue-on-error: true
         id: publish-retry-1
-        uses: ./
+        uses: ./js
         with:
           relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/
           url: ${{ steps.upload.outputs.blossomUrl }}
@@ -92,7 +94,7 @@ jobs:
       - name: Publish NIP-94 Metadata (Final Attempt)
         if: steps.publish-retry-1.outcome == 'failure'
         id: publish-retry-2
-        uses: ./
+        uses: ./js
         with:
           relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/
           url: ${{ steps.upload.outputs.blossomUrl }}
@@ -120,7 +122,6 @@ jobs:
           
           echo "Event not found on any relay"
           # exit 1
-
 
   test-python-implementation:
     runs-on: ubuntu-latest
