@@ -100,21 +100,21 @@ async function publishNIP94Event(inputs) {
   } finally {
     if (pool) {
       try {
-        // Increased delay to ensure all operations complete
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
         if (pool._relays) {
-          for (const [_, relay] of Object.entries(pool._relays)) {
-            if (relay && typeof relay.close === 'function') {
-              try {
-                await relay.close();
-                console.log(`Closed connection to relay`);
-              } catch (closeError) {
-                console.error(`Error closing relay connection:`, closeError);
+          await Promise.all(
+            Object.values(pool._relays).map(async (relay) => {
+              if (relay && typeof relay.close === 'function') {
+                try {
+                  relay.close();
+                } catch (closeError) {
+                  console.error(`Error closing relay connection:`, closeError);
+                }
               }
-            }
-          }
+            })
+          );
         }
+        // Force cleanup of the pool
+        pool = null;
         console.log("Pool cleaned up successfully");
       } catch (closeError) {
         console.error("Error during cleanup:", closeError);
@@ -191,12 +191,22 @@ async function main() {
 - https://snort.social/e/${result.noteId}
 - https://primal.net/e/${result.eventId}`);
 
+    // Add explicit exit
+    process.exit(0);
+
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("Action failed:", errorMessage);
     core.setFailed(error.message);
+    process.exit(1);
   }
 }
+
+// Modify the main execution to handle any unhandled rejections
+process.on('unhandledRejection', (error) => {
+  console.error('Unhandled Rejection:', error);
+  process.exit(1);
+});
 
 main().catch(error => {
   console.error("Unhandled error in main:", error);
