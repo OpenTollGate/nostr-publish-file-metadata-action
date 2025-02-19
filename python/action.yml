@@ -60,4 +60,5 @@ runs:
         INPUT_CONTENT: ${{ inputs.content }}
         INPUT_SIZE: ${{ inputs.size }}
         INPUT_DIMENSIONS: ${{ inputs.dimensions }}
+        GITHUB_OUTPUT: ${{ env.GITHUB_OUTPUT }}
       run: python ${{ github.action_path }}/publish_nip94.py
