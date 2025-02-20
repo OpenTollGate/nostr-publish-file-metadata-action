@@ -141,7 +141,8 @@ jobs:
           nostrPrivateKey: ${{ secrets.NSEC }}
 
       - name: Publish NIP-94 Metadata (Python)
-        uses: ./python
+        id: publish
+        uses: ./python/action.yml
         with:
           relays: "wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/"
           url: ${{ steps.upload.outputs.blossomUrl }}
@@ -152,21 +153,25 @@ jobs:
           nsec: ${{ secrets.NSEC }}
           size: ${{ steps.upload.outputs.size }}
 
-      - name: Verify Event Publication
-        id: publish
+      - name: Debug Variables
         run: |
-          EVENT_ID="${{ steps.publish.outputs.eventId }}"
-          RELAYS=("wss://relay.damus.io" "wss://nos.lol" "wss://nostr.mom")
-          
-          npm install -g wscat
-          
-          for relay in "${RELAYS[@]}"; do
-            echo "Checking $relay for event..."
-            echo '["REQ", "verify", {"ids":["'$EVENT_ID'"]}]' | wscat -c "$relay" -w 5 | grep -q "$EVENT_ID" && {
-              echo "Event found on $relay"
-              exit 0
-            }
-          done
-          
-          echo "Event not found on any relay"
-          exit 1
+          echo "Event ID: ${{ steps.publish.outputs.eventId }}"
+          echo "Blossom URL: ${{ steps.upload.outputs.blossomUrl }}"
+          echo "Blossom Hash: ${{ steps.upload.outputs.blossomHash }}"
+          echo "Size: ${{ steps.upload.outputs.size }}"
+
+      - name: Verify NIP-94 Event
+        id: verify
+        uses: ./python/verify_action.yml
+        with:
+          eventId: ${{ steps.publish.outputs.eventId }}
+          relays: "wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/"
+
+      - name: Verification Summary
+        run: |
+          if [[ "${{ steps.verify.outputs.found }}" == "true" ]]; then
+            echo "✅ Event successfully verified on relays"
+          else
+            echo "❌ Event verification failed"
+            exit 1
+          fi
