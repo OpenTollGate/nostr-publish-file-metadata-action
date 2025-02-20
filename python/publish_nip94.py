@@ -122,7 +122,7 @@ class NIP94Publisher:
             print(f"- {relay}: {'✓' if success else '✗'}")
         return results
 
-    def verify_event_published(self, event: Event, timeout: int = 5) -> bool:
+    def verify_event_published(self, event: Event, timeout: int = 10) -> bool:
         """Verify if an event was published to at least one relay"""
         for relay_url in self.relays:
             try:
@@ -137,7 +137,8 @@ class NIP94Publisher:
                 }]
                 """
                 filters = [{
-                    "ids": [event.id]
+                    "ids": [event.id],
+                    "kinds": [1]
                 }]
             
                 subscription_id = f"verify_{event.id[:8]}"
