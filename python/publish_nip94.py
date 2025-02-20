@@ -147,7 +147,7 @@ class NIP94Publisher:
             print(f"- {relay}: {'✓' if success else '✗'}")
         return results
 
-    def verify_event_published(self, event: Event, timeout: int = 15) -> bool:
+    def verify_event_published(self, event: Event, timeout: int = 120) -> bool:
         """Verify event exists on at least one relay"""
         for relay_url in self.relays:
             try:
@@ -158,6 +158,7 @@ class NIP94Publisher:
                 # Filter by specific event ID only
                 filters = [{"ids": [event.id]}]
                 subscription_id = f"verify_{event.id[:8]}"
+                print("subscription_id: ", subscription_id)
                 relay_manager.add_subscription(subscription_id, filters)
                 print(f"Checking {relay_url} for event {event.id[:8]}...")
                 start_time = time.time()
