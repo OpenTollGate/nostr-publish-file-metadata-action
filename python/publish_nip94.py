@@ -149,32 +149,39 @@ class NIP94Publisher:
 
     def verify_event_published(self, event: Event, timeout: int = 120) -> bool:
         """Verify event exists on at least one relay"""
+        from nostr.filter import Filter, Filters
+        from nostr.message_type import ClientMessageType
+
         for relay_url in self.relays:
             try:
                 relay_manager = RelayManager()
                 relay_manager.add_relay(relay_url)
-                relay_manager.open_connections({"cert_reqs": ssl.CERT_NONE})
-
-                # Filter by specific event ID only
-                filters = [{"ids": [event.id]}]
-                subscription_id = f"verify_{event.id[:8]}"
-                print("subscription_id: ", subscription_id)
-                relay_manager.add_subscription(subscription_id, filters)
-                print(f"Checking {relay_url} for event {event.id[:8]}...")
-                start_time = time.time()
             
-                # Process messages in real-time
-                while time.time() - start_time < timeout:
-                    relay_manager.run_sync()
-                    while relay_manager.message_pool.has_events():
-                        msg = relay_manager.message_pool.get_event()
-                        print("msg: ", str(msg))
-                        if isinstance(msg, list) and msg[0] == "EVENT":
-                            received_event = msg[2]
-                            if received_event["id"] == event.id:
-                                print(f"Found event on {relay_url}!")
-                                return True
-                    time.sleep(1)
+                # Create filter for the specific event
+                filters = Filters([Filter(event_ids=[event.id])])
+                subscription_id = f"verify_{event.id[:8]}"
+            
+                # Setup request
+                request = [ClientMessageType.REQUEST, subscription_id]
+                request.extend(filters.to_json_array())
+                
+                # Open connection and add subscription
+                relay_manager.add_subscription(subscription_id, filters)
+                relay_manager.open_connections({"cert_reqs": ssl.CERT_NONE})
+                time.sleep(1)  # Wait for connection
+
+                # Send the request
+                message = json.dumps(request)
+                relay_manager.publish_message(message)
+                time.sleep(2)  # Wait for response
+
+                # Check for events
+                while relay_manager.message_pool.has_events():
+                    event_msg = relay_manager.message_pool.get_event()
+                    if event_msg.event.id == event.id:
+                        print(f"Found event on {relay_url}!")
+                        relay_manager.close_connections()
+                        return True
                 
             except Exception as e:
                 print(f"Verification error on {relay_url}: {str(e)}")
