@@ -87,6 +87,4 @@ def test_event_verification(publisher):
     results = publisher.publish_event(event)
     time.sleep(2)  # Wait for propagation
 
-    print("Event: ", str(publisher.find_event_on_relays(event.id)))
-    
     assert publisher.verify_event_published(event), "Published event could not be retrieved from any relay"
