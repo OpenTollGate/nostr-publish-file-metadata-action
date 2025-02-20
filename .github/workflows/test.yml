@@ -142,7 +142,7 @@ jobs:
 
       - name: Publish NIP-94 Metadata (Python)
         id: publish
-        uses: ./python/action.yml
+        uses: ./python
         with:
           relays: "wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/"
           url: ${{ steps.upload.outputs.blossomUrl }}
