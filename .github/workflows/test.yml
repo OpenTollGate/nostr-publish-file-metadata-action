@@ -162,7 +162,7 @@ jobs:
 
       - name: Verify NIP-94 Event
         id: verify
-        uses: ./python/verify_action.yml
+        uses: ./python/verify
         with:
           eventId: ${{ steps.publish.outputs.eventId }}
           relays: "wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/"
