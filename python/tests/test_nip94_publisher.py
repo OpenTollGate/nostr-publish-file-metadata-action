@@ -71,7 +71,7 @@ def test_publish_event(publisher):
     # Check if at least one relay succeeded
     assert any(results.values()), "Failed to publish to any relay"
 
-def test_event_verification():
+def test_event_verification(publisher):
     """Test if published event can be retrieved from relays"""
     publisher = NIP94Publisher(TEST_RELAYS, TEST_PRIVATE_KEY)
     
@@ -85,48 +85,6 @@ def test_event_verification():
     )
     
     results = publisher.publish_event(event)
+    time.sleep(2)  # Wait for propagation
     
-    # Wait for event propagation
-    time.sleep(2)
-    
-    # Try to retrieve event from each relay
-    event_found = False
-    for relay_url in TEST_RELAYS:
-        try:
-            relay_manager = RelayManager()
-            relay_manager.add_relay(relay_url)
-            
-            # Open connection with SSL verification disabled
-            relay_manager.open_connections({"cert_reqs": ssl.CERT_NONE})
-            time.sleep(1)  # Wait for connection
-            
-            # Create subscription filter
-            filters = [{
-                "ids": [event.id],
-                "kinds": [1063]
-            }]
-            
-            # Subscribe and wait for messages
-            subscription_id = "verify_" + event.id[:8]
-            relay_manager.add_subscription(subscription_id, filters)
-            time.sleep(2)  # Wait for response
-            
-            # Check received messages
-            messages = relay_manager.message_pool.messages
-            for msg in messages:
-                if isinstance(msg, list) and len(msg) > 2 and msg[0] == "EVENT":
-                    received_event = msg[2]
-                    if received_event.get("id") == event.id:
-                        event_found = True
-                        break
-            
-            relay_manager.close_connections()
-            
-            if event_found:
-                break
-                
-        except Exception as e:
-            print(f"Error verifying event on {relay_url}: {e}")
-            continue
-    
-    assert event_found, "Published event could not be retrieved from any relay"
+    assert publisher.verify_event_published(event), "Published event could not be retrieved from any relay"

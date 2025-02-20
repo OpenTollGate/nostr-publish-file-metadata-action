@@ -106,6 +106,38 @@ class NIP94Publisher:
             print(f"- {relay}: {'✓' if success else '✗'}")
         return results
 
+    def verify_event_published(self, event: Event, timeout: int = 5) -> bool:
+        """Verify if an event was published to at least one relay"""
+        for relay_url in self.relays:
+            try:
+                relay_manager = RelayManager()
+                relay_manager.add_relay(relay_url)
+                relay_manager.open_connections({"cert_reqs": ssl.CERT_NONE})
+                
+                filters = [{
+                    "ids": [event.id],
+                    "kinds": [1063]
+                }]
+            
+                subscription_id = f"verify_{event.id[:8]}"
+                relay_manager.add_subscription(subscription_id, filters)
+            
+                start_time = time.time()
+                while time.time() - start_time < timeout:
+                    for msg in relay_manager.message_pool.messages:
+                        if isinstance(msg, list) and len(msg) > 2 and msg[0] == "EVENT":
+                            received_event = msg[2]
+                            if received_event.get("id") == event.id:
+                                return True
+                    time.sleep(0.5)
+                
+            except Exception as e:
+                print(f"Error verifying event on {relay_url}: {e}")
+            finally:
+                relay_manager.close_connections()
+        return False
+
+
 def main():
     # Get inputs from environment variables (GitHub Actions style)
     required_inputs = [
