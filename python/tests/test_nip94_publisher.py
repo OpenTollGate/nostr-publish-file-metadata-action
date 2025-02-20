@@ -95,20 +95,28 @@ def test_event_verification():
         try:
             relay_manager = RelayManager()
             relay_manager.add_relay(relay_url)
+            
+            # Open connection with SSL verification disabled
             relay_manager.open_connections({"cert_reqs": ssl.CERT_NONE})
+            time.sleep(1)  # Wait for connection
             
-            # Subscribe to get the event
+            # Create subscription filter
+            filters = [{
+                "ids": [event.id],
+                "kinds": [1063]
+            }]
+            
+            # Subscribe and wait for messages
             subscription_id = "verify_" + event.id[:8]
-            relay_manager.add_subscription(subscription_id, {"ids": [event.id]})
+            relay_manager.add_subscription(subscription_id, filters)
+            time.sleep(2)  # Wait for response
             
-            # Wait for response
-            time.sleep(1)
-            
-            messages = relay_manager.message_pool.get_all()
-            for message in messages:
-                if message.startswith('["EVENT"'):
-                    event_data = json.loads(message)[2]
-                    if event_data["id"] == event.id:
+            # Check received messages
+            messages = relay_manager.message_pool.messages
+            for msg in messages:
+                if isinstance(msg, list) and len(msg) > 2 and msg[0] == "EVENT":
+                    received_event = msg[2]
+                    if received_event.get("id") == event.id:
                         event_found = True
                         break
             
@@ -122,18 +130,3 @@ def test_event_verification():
             continue
     
     assert event_found, "Published event could not be retrieved from any relay"
-
-"""
-def test_invalid_inputs():
-    # Test handling of invalid inputs
-    publisher = NIP94Publisher(TEST_RELAYS, TEST_PRIVATE_KEY)
-    
-    with pytest.raises(Exception):
-        # Test with missing required tags
-        publisher.create_nip94_event(
-            url="",  # Empty URL
-            mime_type=TEST_MIME_TYPE,
-            file_hash=TEST_FILE_HASH,
-            original_hash=TEST_FILE_HASH
-        )
-"""
