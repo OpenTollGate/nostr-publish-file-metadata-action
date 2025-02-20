@@ -122,49 +122,38 @@ class NIP94Publisher:
             print(f"- {relay}: {'✓' if success else '✗'}")
         return results
 
-    def verify_event_published(self, event: Event, timeout: int = 10) -> bool:
-        """Verify if an event was published to at least one relay"""
+    def verify_event_published(self, event: Event, timeout: int = 15) -> bool:
+        """Verify event exists on at least one relay"""
         for relay_url in self.relays:
             try:
                 relay_manager = RelayManager()
                 relay_manager.add_relay(relay_url)
                 relay_manager.open_connections({"cert_reqs": ssl.CERT_NONE})
 
-                """
-                filters = [{
-                    "ids": [event.id],
-                    "kinds": [1063]
-                }]
-                """
-                filters = [{
-                    "ids": [event.id],
-                    "kinds": [1]
-                }]
-            
+                # Filter by specific event ID only
+                filters = [{"ids": [event.id]}]
                 subscription_id = f"verify_{event.id[:8]}"
                 relay_manager.add_subscription(subscription_id, filters)
-            
+                print(f"Checking {relay_url} for event {event.id[:8]}...")
                 start_time = time.time()
+            
+                # Process messages in real-time
                 while time.time() - start_time < timeout:
-                    messages = []
+                    relay_manager.run_sync()
                     while relay_manager.message_pool.has_events():
-                        message = relay_manager.message_pool.get_event()
-                        messages.append(message)
-                    for msg in messages:
-                        if isinstance(msg, list) and len(msg) > 2 and msg[0] == "EVENT":
+                        msg = relay_manager.message_pool.get_event()
+                        print("msg: ", str(msg))
+                        if isinstance(msg, list) and msg[0] == "EVENT":
                             received_event = msg[2]
-                            if received_event.get("id") == event.id:
+                            if received_event["id"] == event.id:
+                                print(f"Found event on {relay_url}!")
                                 return True
-                    time.sleep(0.5)
+                    time.sleep(1)
                 
-
             except Exception as e:
-                print(f"Error verifying event on {relay_url}: {e}")
+                print(f"Verification error on {relay_url}: {str(e)}")
             finally:
-                try:
-                    relay_manager.close_connections()
-                except Exception as e:
-                    print(f"Error closing connection: {e}")
+                relay_manager.close_connections()
         return False
 
 
