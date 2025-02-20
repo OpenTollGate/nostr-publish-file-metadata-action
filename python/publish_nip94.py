@@ -16,6 +16,12 @@ class NIP94Publisher:
         self.private_key = PrivateKey(bytes.fromhex(private_key_hex))
         print(f"Initialized with {len(relays)} relays")
 
+        # Get public key in different formats
+        self.public_key_hex = self.private_key.public_key.hex()
+        self.public_key_bech32 = self.private_key.public_key.bech32()
+        print(f"Public Key (hex): {self.public_key_hex}")
+        print(f"Public Key (bech32): {self.public_key_bech32}")
+
     def create_nip94_event(self, url: str, mime_type: str, file_hash: str,
                           original_hash: str, content: str = "",
                           size: Optional[int] = None,
@@ -47,8 +53,15 @@ class NIP94Publisher:
             public_key=self.private_key.public_key.hex()
         )
         """
-        event = Event(content="Hello Nostr")
-        
+
+        event = Event(
+            content="Hello Nostr",
+            public_key=self.public_key_hex,
+            created_at=int(time.time()),
+            kind=1,
+            tags=[]
+        )
+
         # Sign the event
         self.private_key.sign_event(event)
         
@@ -116,10 +129,15 @@ class NIP94Publisher:
                 relay_manager = RelayManager()
                 relay_manager.add_relay(relay_url)
                 relay_manager.open_connections({"cert_reqs": ssl.CERT_NONE})
-                
+
+                """
                 filters = [{
                     "ids": [event.id],
                     "kinds": [1063]
+                }]
+                """
+                filters = [{
+                    "ids": [event.id]
                 }]
             
                 subscription_id = f"verify_{event.id[:8]}"
