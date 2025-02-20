@@ -22,6 +22,31 @@ class NIP94Publisher:
         print(f"Public Key (hex): {self.public_key_hex}")
         print(f"Public Key (bech32): {self.public_key_bech32}")
 
+    def find_event_on_relays(self, event_id: str):
+        """Manual search tool for debugging"""
+        from nostr.filter import Filter
+        from nostr.event import EventKind
+        
+        filter = Filter(event_ids=[event_id])
+    
+        for relay_url in self.relays:
+            try:
+                print(f"\nChecking {relay_url}...")
+                relay_manager = RelayManager()
+                relay_manager.add_relay(relay_url)
+                relay_manager.open_connections({"cert_reqs": ssl.CERT_NONE})
+                relay_manager.add_subscription("debug", [filter])
+                time.sleep(3)  # Wait for responses
+
+                while relay_manager.message_pool.has_events():
+                    msg = relay_manager.message_pool.get_event()
+                    print(f"Received message: {msg[:200]}...")
+
+            except Exception as e:
+                print(f"Debug error: {str(e)}")
+            finally:
+                relay_manager.close_connections()
+        
     def create_nip94_event(self, url: str, mime_type: str, file_hash: str,
                           original_hash: str, content: str = "",
                           size: Optional[int] = None,
