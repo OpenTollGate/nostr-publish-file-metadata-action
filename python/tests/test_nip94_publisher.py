@@ -12,7 +12,7 @@ from publish_nip94 import NIP94Publisher
 
 # Test constants
 TEST_RELAYS = ["wss://relay.damus.io", "wss://nos.lol", "wss://nostr.mom"]
-TEST_PRIVATE_KEY = "0123456789abcdef" * 4  # Example private key, replace with actual test key
+TEST_PRIVATE_KEY = "46fd56c8e353889a5c8dec0fca1817336f2d493270b23f3dddcdfbff0671c85e"
 TEST_URL = "nostr:example.com/testfile.txt"
 TEST_MIME_TYPE = "text/plain"
 TEST_FILE_HASH = "f3589ec0d6c14b7080cdaf278c773f7de40e4516013f76796fd304eee93f4120"

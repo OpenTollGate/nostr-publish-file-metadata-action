@@ -39,20 +39,23 @@ class NIP94Publisher:
             tags.append(["dim", dimensions])
 
         # Create event with kind 1063 (NIP-94)
+        """
         event = Event(
             content=content,
             kind=1063,
             tags=tags,
             public_key=self.private_key.public_key.hex()
         )
+        """
+        event = Event(content="Hello Nostr")
         
         # Sign the event
         self.private_key.sign_event(event)
         
-        print(f"Event created successfully:")
-        print(f"- ID: {event.id}")
-        print(f"- Kind: {event.kind}")
-        print(f"- Tags: {len(tags)}")
+        #print(f"Event created successfully:")
+        #print(f"- ID: {event.id}")
+        #print(f"- Kind: {event.kind}")
+        #print(f"- Tags: {len(tags)}")
         
         return event
 
@@ -124,17 +127,25 @@ class NIP94Publisher:
             
                 start_time = time.time()
                 while time.time() - start_time < timeout:
-                    for msg in relay_manager.message_pool.messages:
+                    messages = []
+                    while relay_manager.message_pool.has_events():
+                        message = relay_manager.message_pool.get_event()
+                        messages.append(message)
+                    for msg in messages:
                         if isinstance(msg, list) and len(msg) > 2 and msg[0] == "EVENT":
                             received_event = msg[2]
                             if received_event.get("id") == event.id:
                                 return True
                     time.sleep(0.5)
                 
+
             except Exception as e:
                 print(f"Error verifying event on {relay_url}: {e}")
             finally:
-                relay_manager.close_connections()
+                try:
+                    relay_manager.close_connections()
+                except Exception as e:
+                    print(f"Error closing connection: {e}")
         return False
 
 
