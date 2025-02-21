@@ -85,8 +85,8 @@ runs:
         echo "Contents of GITHUB_ENV after publishing:"
         cat "$GITHUB_ENV"
 
-    - name: Set Action Outputs
-      shell: bash
-      run: |
-        echo "eventId=$(grep '^eventId=' "$GITHUB_OUTPUT" | cut -d= -f2)" >> $GITHUB_OUTPUT
-        echo "noteId=$(grep '^noteId=' "$GITHUB_OUTPUT" | cut -d= -f2)" >> $GITHUB_OUTPUT
+#    - name: Set Action Outputs
+#      shell: bash
+#      run: |
+#        echo "eventId=$(grep '^eventId=' "$GITHUB_OUTPUT" | cut -d= -f2)" >> $GITHUB_OUTPUT
+#        echo "noteId=$(grep '^noteId=' "$GITHUB_OUTPUT" | cut -d= -f2)" >> $GITHUB_OUTPUT
