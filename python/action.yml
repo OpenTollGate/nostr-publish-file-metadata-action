@@ -60,8 +60,11 @@ runs:
         INPUT_CONTENT: ${{ inputs.content }}
         INPUT_SIZE: ${{ inputs.size }}
         INPUT_DIMENSIONS: ${{ inputs.dimensions }}
-        GITHUB_OUTPUT: ${{ github.env }}
+        GITHUB_OUTPUT: ${{ github.output }}
       run: |
+        # Create output file if it doesn't exist
+        touch "$GITHUB_OUTPUT"
+        
         # Debug the environment
         echo "Running publisher with outputs to: $GITHUB_OUTPUT"
         
@@ -69,9 +72,12 @@ runs:
         python ${{ github.action_path }}/publish_nip94.py
         
         # Debug the output file
-        if [ -f "$GITHUB_OUTPUT" ]; then
-          echo "Contents of GITHUB_OUTPUT:"
-          cat "$GITHUB_OUTPUT"
-        else
-          echo "GITHUB_OUTPUT file not found"
+        echo "Contents of GITHUB_OUTPUT after publishing:"
+        cat "$GITHUB_OUTPUT"
+        
+        # Make sure the outputs are available to subsequent steps
+        if [ -f "event_id.txt" ]; then
+          EVENT_ID=$(cat event_id.txt)
+          echo "eventId=$EVENT_ID" >> "$GITHUB_OUTPUT"
+          echo "noteId=note1$EVENT_ID" >> "$GITHUB_OUTPUT"
         fi

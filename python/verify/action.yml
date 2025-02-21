@@ -32,14 +32,11 @@ runs:
         INPUT_RELAYS: ${{ inputs.relays }}
         GITHUB_OUTPUT: ${{ github.output }}
       run: |
+        # Create output file if it doesn't exist
+        touch "$GITHUB_OUTPUT"
+        
         # Debug input values
         echo "Event ID: $INPUT_EVENTID"
         echo "Relays: $INPUT_RELAYS"
-        
-        # Create temporary output file if GITHUB_OUTPUT is not set
-        if [ -z "$GITHUB_OUTPUT" ]; then
-          export GITHUB_OUTPUT="/tmp/github_output"
-          touch $GITHUB_OUTPUT
-        fi
         
         python ${{ github.action_path }}/verify_nip94.py
