@@ -43,12 +43,12 @@ def verify_event_on_relays(event_id: str, relays: list) -> bool:
                     event_msg = relay_manager.message_pool.get_event()
                     if event_msg.event.id == event_id:
                         print(f"✓ Event found on {relay_url}!")
-                        os.environ['verify'] = true
+                        os.environ['verify'] = "true"
                         return True
                 time.sleep(0.5)
             
             print(f"✗ Event not found on {relay_url}")
-            os.environ['verify'] = false
+            os.environ['verify'] = "false"
             
         except Exception as e:
             print(f"Error checking {relay_url}: {str(e)}")
