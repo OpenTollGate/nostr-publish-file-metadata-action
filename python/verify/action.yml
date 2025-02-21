@@ -1,4 +1,4 @@
-# python/verify_action.yml
+# python/verify/action.yml
 name: 'NIP-94 Event Verifier'
 description: 'Verifies NIP-94 events on Nostr relays'
 inputs:
@@ -30,5 +30,16 @@ runs:
       env:
         INPUT_EVENTID: ${{ inputs.eventId }}
         INPUT_RELAYS: ${{ inputs.relays }}
-        GITHUB_OUTPUT: ${{ env.GITHUB_OUTPUT }}
-      run: python ${{ github.action_path }}/verify_nip94.py
+        GITHUB_OUTPUT: ${{ github.output }}
+      run: |
+        # Debug input values
+        echo "Event ID: $INPUT_EVENTID"
+        echo "Relays: $INPUT_RELAYS"
+        
+        # Create temporary output file if GITHUB_OUTPUT is not set
+        if [ -z "$GITHUB_OUTPUT" ]; then
+          export GITHUB_OUTPUT="/tmp/github_output"
+          touch $GITHUB_OUTPUT
+        fi
+        
+        python ${{ github.action_path }}/verify_nip94.py

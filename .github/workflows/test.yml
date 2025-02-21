@@ -153,12 +153,18 @@ jobs:
           nsec: ${{ secrets.NSEC }}
           size: ${{ steps.upload.outputs.size }}
 
-      - name: Debug Variables
+      - name: Enhanced Debug Variables
         run: |
-          echo "Event ID: ${{ steps.publish.outputs.eventId }}"
-          echo "Blossom URL: ${{ steps.upload.outputs.blossomUrl }}"
-          echo "Blossom Hash: ${{ steps.upload.outputs.blossomHash }}"
-          echo "Size: ${{ steps.upload.outputs.size }}"
+          echo "Publish step outputs:"
+          echo "  eventId: '${{ steps.publish.outputs.eventId }}'"
+          echo "  noteId: '${{ steps.publish.outputs.noteId }}'"
+          echo "Upload step outputs:"
+          echo "  blossomUrl: '${{ steps.upload.outputs.blossomUrl }}'"
+          echo "  blossomHash: '${{ steps.upload.outputs.blossomHash }}'"
+          echo "  size: '${{ steps.upload.outputs.size }}'"
+          
+          # Save eventId to a file for verification
+          echo "${{ steps.publish.outputs.eventId }}" > event_id.txt
 
       - name: Verify NIP-94 Event
         id: verify
