@@ -182,10 +182,10 @@ jobs:
             ls 
           fi
 
-      - name: Store Event ID in Environment
-        run: |
-          EVENT_ID=${{ steps.publish.outputs.eventId }}
-          echo "EVENT_ID=${EVENT_ID}" >> $GITHUB_ENV
+#      - name: Store Event ID in Environment
+#        run: |
+#          EVENT_ID=${{ steps.publish.outputs.eventId }}
+#          echo "EVENT_ID=${EVENT_ID}" >> $GITHUB_ENV
 
       - name: Verify NIP-94 Event
         id: verify

@@ -82,8 +82,8 @@ runs:
 
         echo "Contents of GITHUB_OUTPUT after publishing:"
         cat "$GITHUB_OUTPUT"
-        echo "Contents of GITHUB_ENV after publishing:"
-        cat "$GITHUB_ENV"
+#        echo "Contents of GITHUB_ENV after publishing:"
+#        cat "$GITHUB_ENV"
 
 #    - name: Set Action Outputs
 #      shell: bash
