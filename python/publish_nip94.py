@@ -195,7 +195,6 @@ def main():
     
     # Optional inputs
     content = os.environ.get('INPUT_CONTENT', '')
-    # size = int(os.environ['INPUT_SIZE']) if 'INPUT_SIZE' in os.environ else None
     dimensions = os.environ.get('INPUT_DIMENSIONS')
 
     try:
@@ -209,7 +208,6 @@ def main():
             file_hash=file_hash,
             original_hash=original_hash,
             content=content,
-            # size=size,
             dimensions=dimensions
         )
 
@@ -226,7 +224,7 @@ def main():
         # Publish event
         results = publisher.publish_event(event)
 
-        # Set outputs using GitHub Actions Environment File
+        # Set outputs using GitHub Actions Environment File and as fallback save to file
         event_id = event.id  # Store event ID
         note_id = f"note1{event.id}"  # Store note ID
         
@@ -237,34 +235,22 @@ def main():
         
         if 'GITHUB_OUTPUT' in os.environ:
             github_output = os.environ['GITHUB_OUTPUT']
-            print(f"GITHUB_OUTPUT path: {github_output}")
-            
-            try:
-                with open(github_output, 'a') as fh:
-                    fh.write(f"eventId={event_id}\n")
-                    fh.write(f"noteId={note_id}\n")
-                print("Successfully wrote to GITHUB_OUTPUT file")
-                
-                # Verify the write
-                if os.path.exists(github_output):
-                    with open(github_output, 'r') as fh:
-                        content = fh.read()
-                        print("GITHUB_OUTPUT contents:")
-                        print(content)
-            except Exception as e:
-                print(f"Error writing to GITHUB_OUTPUT: {str(e)}")
+            with open(github_output, 'a') as fh:
+                print(f"eventId={event_id}", file=fh)
+                print(f"noteId={note_id}", file=fh)
+            print(f"Successfully wrote to GITHUB_OUTPUT file at {github_output}")
+            with open(github_output, 'r') as fh:
+                print("GITHUB_OUTPUT contents post-write:")
+                print(fh.read())
         else:
-            print("GITHUB_OUTPUT environment variable not set")
-            print(f"eventId={event_id}")
-            print(f"noteId={note_id}")
+            # Save as a fallback in case GITHUB_OUTPUT is not set
+            print("GITHUB_OUTPUT environment variable not set. Saving event ID to event_id.txt")
+            with open('event_id.txt', 'w') as f:
+                f.write(event_id)
 
         # Also set environment variables as backup
         os.environ['EVENT_ID'] = event_id
         os.environ['NOTE_ID'] = note_id
-        
-        # Write to a file as another backup
-        with open('event_id.txt', 'w') as f:
-            f.write(event_id)
 
         # Check if we had at least one successful publish
         successful_publishes = sum(1 for result in results.values() if result)
