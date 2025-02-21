@@ -65,6 +65,15 @@ runs:
         touch "$GITHUB_OUTPUT"
         echo "Running publisher with outputs to: $GITHUB_OUTPUT"
         python ${{ github.action_path }}/publish_nip94.py
+
+
+  	# Force write outputs using both methods, even though ::set-output is depricated
+	  EVENT_ID=$(cat event_id.txt)
+	  echo "::set-output name=eventId::$EVENT_ID"
+	  echo "::set-output name=noteId::note1$EVENT_ID"
+	  echo "eventId=$EVENT_ID" >> $GITHUB_OUTPUT
+	  echo "noteId=note1$EVENT_ID" >> $GITHUB_OUTPUT
+
         EVENT_ID=$(grep '^eventId=' "$GITHUB_OUTPUT" | cut -d= -f2)
         NOTE_ID=$(grep '^noteId=' "$GITHUB_OUTPUT" | cut -d= -f2)
         echo "eventId=${EVENT_ID}" >> "$GITHUB_OUTPUT"
@@ -76,6 +85,8 @@ runs:
         cat "$GITHUB_OUTPUT"
         echo "Contents of GITHUB_ENV after publishing:"
         cat "$GITHUB_ENV"
+
+	
 
     - name: Set Action Outputs
       shell: bash

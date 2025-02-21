@@ -157,6 +157,11 @@ jobs:
           echo "Publish step outputs:"
           echo "  eventId: '${{ steps.publish.outputs.eventId }}'"
           echo "  noteId: '${{ steps.publish.outputs.noteId }}'"
+    
+          echo "Environment variables:"
+          echo "EVENT_ID: $EVENT_ID"
+          echo "NOTE_ID: $NOTE_ID"
+
           echo "Upload step outputs:"
           echo "  blossomUrl: '${{ steps.upload.outputs.blossomUrl }}'"
           echo "  blossomHash: '${{ steps.upload.outputs.blossomHash }}'"
@@ -172,6 +177,7 @@ jobs:
             cat "$GITHUB_OUTPUT"
           fi
 
+          echo "File contents:"
           if [ -f event_id.txt ]; then
             cat event_id.txt
           fi
