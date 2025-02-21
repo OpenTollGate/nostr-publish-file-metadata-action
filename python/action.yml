@@ -65,10 +65,20 @@ runs:
         touch "$GITHUB_OUTPUT"
         echo "Running publisher with outputs to: $GITHUB_OUTPUT"
         python ${{ github.action_path }}/publish_nip94.py
-        if [ -f "event_id.txt" ]; then
-          EVENT_ID=$(cat event_id.txt)
-          echo "eventId=$EVENT_ID" >> "$GITHUB_OUTPUT"
-          echo "noteId=note1$EVENT_ID" >> "$GITHUB_OUTPUT"
-        fi
+        EVENT_ID=$(grep '^eventId=' "$GITHUB_OUTPUT" | cut -d= -f2)
+        NOTE_ID=$(grep '^noteId=' "$GITHUB_OUTPUT" | cut -d= -f2)
+        echo "eventId=${EVENT_ID}" >> "$GITHUB_OUTPUT"
+        echo "noteId=${NOTE_ID}" >> "$GITHUB_OUTPUT"
+        echo "EVENT_ID=${EVENT_ID}" >> $GITHUB_ENV
+        echo "NOTE_ID=${NOTE_ID}" >> $GITHUB_ENV
+
         echo "Contents of GITHUB_OUTPUT after publishing:"
         cat "$GITHUB_OUTPUT"
+        echo "Contents of GITHUB_ENV after publishing:"
+        cat "$GITHUB_ENV"
+
+    - name: Set Action Outputs
+      shell: bash
+      run: |
+        echo "eventId=$(grep '^eventId=' "$GITHUB_OUTPUT" | cut -d= -f2)" >> $GITHUB_OUTPUT
+        echo "noteId=$(grep '^noteId=' "$GITHUB_OUTPUT" | cut -d= -f2)" >> $GITHUB_OUTPUT
