@@ -75,8 +75,8 @@ runs:
         
         EVENT_ID=$(grep '^eventId=' "$GITHUB_OUTPUT" | cut -d= -f2)
         NOTE_ID=$(grep '^noteId=' "$GITHUB_OUTPUT" | cut -d= -f2)
-        echo "eventId=${EVENT_ID}" >> "$GITHUB_OUTPUT"
-        echo "noteId=${NOTE_ID}" >> "$GITHUB_OUTPUT"
+        #echo "eventId=${EVENT_ID}" >> "$GITHUB_OUTPUT"
+        #echo "noteId=${NOTE_ID}" >> "$GITHUB_OUTPUT"
         echo "EVENT_ID=${EVENT_ID}" >> $GITHUB_ENV
         echo "NOTE_ID=${NOTE_ID}" >> $GITHUB_ENV
 
