@@ -207,9 +207,12 @@ jobs:
 
 
       - name: Verification Summary
+        shell: bash
         run: |
+          echo "VERIFY value: ${{ env.VERIFY }}"
           if [[ "${{ env.VERIFY }}" == "true" ]]; then
             echo "✅ Event successfully verified on relays"
+            exit 0
           else
             echo "❌ Event verification failed"
             exit 1

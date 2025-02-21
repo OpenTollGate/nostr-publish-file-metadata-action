@@ -49,7 +49,7 @@ runs:
         
         # Write both to GITHUB_OUTPUT and GITHUB_ENV
         echo "verify=${verify}" >> $GITHUB_OUTPUT
-        echo "VERIFY=${verify}" >> $GITHUB_ENV
+        # echo "VERIFY=${verify}" >> $GITHUB_ENV
 
         echo "GITHUB_OUTPUT:"
         echo $GITHUB_OUTPUT
