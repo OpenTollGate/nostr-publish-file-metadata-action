@@ -213,6 +213,19 @@ def main():
             dimensions=dimensions
         )
 
+        event_dict = {
+            "id": event.id,
+            "pubkey": event.public_key,
+            "created_at": event.created_at,
+            "kind": event.kind,
+            "tags": event.tags,
+            "content": event.content
+        }
+        print("event: ", json.dumps(event_dict, indent=2))
+
+        # Publish event
+        results = publisher.publish_event(event)
+
         # Set outputs using GitHub Actions Environment File
         event_id = event.id  # Store event ID
         note_id = f"note1{event.id}"  # Store note ID
