@@ -166,6 +166,24 @@ jobs:
           # Save eventId to a file for verification
           echo "${{ steps.publish.outputs.eventId }}" > event_id.txt
 
+          echo "===== Debug Publish Step ====="
+          echo "Publish step status: ${{ steps.publish.outcome }}"
+          echo "Publish step result: ${{ steps.publish.result }}"
+          
+          # Try to read from GITHUB_OUTPUT if it exists
+          if [[ -f "$GITHUB_OUTPUT" ]]; then
+            echo "Contents of GITHUB_OUTPUT:"
+            cat "$GITHUB_OUTPUT"
+          fi
+
+      # Store event ID in environment variable and file
+      - name: Store Event ID
+        run: |
+          EVENT_ID="${{ steps.publish.outputs.eventId }}"
+          echo "EVENT_ID=$EVENT_ID" >> $GITHUB_ENV
+          echo "$EVENT_ID" > event_id.txt
+          echo "Stored Event ID: $EVENT_ID"
+
       - name: Verify NIP-94 Event
         id: verify
         uses: ./python/verify
