@@ -246,11 +246,11 @@ def main():
             with open(github_output, 'r') as fh:
                 print("GITHUB_OUTPUT contents post-write:")
                 print(fh.read())
-        else:
-            # Save as a fallback in case GITHUB_OUTPUT is not set
-            print("GITHUB_OUTPUT environment variable not set. Saving event ID to event_id.txt")
-            with open('event_id.txt', 'w') as f:
-                f.write(event_id)
+
+        # Save as a fallback in case GITHUB_OUTPUT is not set
+        print("GITHUB_OUTPUT environment variable not set. Saving event ID to event_id.txt")
+        with open('event_id.txt', 'w') as f:
+            f.write(event_id)
 
         # Also set environment variables as backup
         os.environ['EVENT_ID'] = event_id
