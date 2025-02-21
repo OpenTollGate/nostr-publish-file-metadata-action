@@ -48,3 +48,4 @@ runs:
         fi
         
         python ${{ github.action_path }}/verify_nip94.py
+        echo "VERIFY=${VERIFY}" >> $GITHUB_ENV

@@ -207,7 +207,9 @@ jobs:
 
       - name: Verification Summary
         run: |
-          if [[ "${{ steps.verify.outputs.found }}" == "true" ]]; then
+          VERIFY: ${{ env.VERIFY }}
+
+          if [[ "${{ VERIFY }}" == "True" ]]; then
             echo "✅ Event successfully verified on relays"
           else
             echo "❌ Event verification failed"
