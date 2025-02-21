@@ -35,10 +35,8 @@ runs:
         # Create output file if it doesn't exist
         touch "$GITHUB_OUTPUT"
         
-        # Use environment variable if input is empty
         EVENT_ID="${INPUT_EVENTID:-$EVENT_ID}"
         
-        # Debug input values
         echo "Event ID: $EVENT_ID"
         echo "Relays: $INPUT_RELAYS"
         
@@ -48,4 +46,7 @@ runs:
         fi
         
         python ${{ github.action_path }}/verify_nip94.py
+        
+        # Write both to GITHUB_OUTPUT and GITHUB_ENV
+        echo "verify=${VERIFY}" >> $GITHUB_OUTPUT
         echo "VERIFY=${VERIFY}" >> $GITHUB_ENV

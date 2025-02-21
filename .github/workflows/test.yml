@@ -205,11 +205,10 @@ jobs:
           eventId: ${{ env.EVENT_ID }}
           relays: "wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/"
 
+
       - name: Verification Summary
         run: |
-          VERIFY: ${{ env.VERIFY }}
-
-          if [[ "${{ VERIFY }}" == "True" ]]; then
+          if [[ "${{ env.VERIFY }}" == "true" ]]; then
             echo "✅ Event successfully verified on relays"
           else
             echo "❌ Event verification failed"
