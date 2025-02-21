@@ -48,5 +48,10 @@ runs:
         python ${{ github.action_path }}/verify_nip94.py
         
         # Write both to GITHUB_OUTPUT and GITHUB_ENV
-        echo "verify=${VERIFY}" >> $GITHUB_OUTPUT
-        echo "VERIFY=${VERIFY}" >> $GITHUB_ENV
+        echo "verify=${verify}" >> $GITHUB_OUTPUT
+        echo "VERIFY=${verify}" >> $GITHUB_ENV
+
+        echo "GITHUB_OUTPUT:"
+        echo $GITHUB_OUTPUT
+        echo "GITHUB_ENV:"
+        echo $GITHUB_ENV
