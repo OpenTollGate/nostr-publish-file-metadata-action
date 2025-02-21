@@ -60,5 +60,18 @@ runs:
         INPUT_CONTENT: ${{ inputs.content }}
         INPUT_SIZE: ${{ inputs.size }}
         INPUT_DIMENSIONS: ${{ inputs.dimensions }}
-        GITHUB_OUTPUT: ${{ env.GITHUB_OUTPUT }}
-      run: python ${{ github.action_path }}/publish_nip94.py
+        GITHUB_OUTPUT: ${{ github.env }}
+      run: |
+        # Debug the environment
+        echo "Running publisher with outputs to: $GITHUB_OUTPUT"
+        
+        # Run the publisher
+        python ${{ github.action_path }}/publish_nip94.py
+        
+        # Debug the output file
+        if [ -f "$GITHUB_OUTPUT" ]; then
+          echo "Contents of GITHUB_OUTPUT:"
+          cat "$GITHUB_OUTPUT"
+        else
+          echo "GITHUB_OUTPUT file not found"
+        fi

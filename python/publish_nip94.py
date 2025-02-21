@@ -213,28 +213,45 @@ def main():
             dimensions=dimensions
         )
 
-        event_dict = {
-            "id": event.id,
-            "pubkey": event.public_key,
-            "created_at": event.created_at,
-            "kind": event.kind,
-            "tags": event.tags,
-            "content": event.content
-        }
-        print("event: ", json.dumps(event_dict, indent=2))
-
-        # Publish event
-        results = publisher.publish_event(event)
-        
         # Set outputs using GitHub Actions Environment File
+        event_id = event.id  # Store event ID
+        note_id = f"note1{event.id}"  # Store note ID
+        
+        # Debug output handling
+        print("\n===== Output Debug Information =====")
+        print(f"Event ID to set: {event_id}")
+        print(f"Note ID to set: {note_id}")
+        
         if 'GITHUB_OUTPUT' in os.environ:
-            with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
-                print(f"eventId={event.id}", file=fh)
-                print(f"noteId=note1{event.id}", file=fh)
+            github_output = os.environ['GITHUB_OUTPUT']
+            print(f"GITHUB_OUTPUT path: {github_output}")
+            
+            try:
+                with open(github_output, 'a') as fh:
+                    fh.write(f"eventId={event_id}\n")
+                    fh.write(f"noteId={note_id}\n")
+                print("Successfully wrote to GITHUB_OUTPUT file")
+                
+                # Verify the write
+                if os.path.exists(github_output):
+                    with open(github_output, 'r') as fh:
+                        content = fh.read()
+                        print("GITHUB_OUTPUT contents:")
+                        print(content)
+            except Exception as e:
+                print(f"Error writing to GITHUB_OUTPUT: {str(e)}")
         else:
-            # Fallback for local testing
-            print(f"eventId={event.id}")
-            print(f"noteId=note1{event.id}")
+            print("GITHUB_OUTPUT environment variable not set")
+            print(f"eventId={event_id}")
+            print(f"noteId={note_id}")
+
+        # Also set environment variables as backup
+        os.environ['EVENT_ID'] = event_id
+        os.environ['NOTE_ID'] = note_id
+        
+        # Write to a file as another backup
+        with open('event_id.txt', 'w') as f:
+            f.write(event_id)
 
         # Check if we had at least one successful publish
         successful_publishes = sum(1 for result in results.values() if result)
@@ -243,14 +260,15 @@ def main():
             sys.exit(1)
         else:
             print(f"\nSuccessfully published to {successful_publishes} relays")
-            print(f"Event ID: {event.id}")
+            print(f"Event ID: {event_id}")
             print("View on:")
-            print(f"- https://snort.social/e/note1{event.id}")
-            print(f"- https://primal.net/e/{event.id}")
+            print(f"- https://snort.social/e/{note_id}")
+            print(f"- https://primal.net/e/{event_id}")
 
     except Exception as e:
         print(f"::error::Failed to publish NIP-94 event: {str(e)}")
-        traceback.print_exc()  # Print full stack trace
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
 
 if __name__ == "__main__":
