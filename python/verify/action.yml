@@ -28,15 +28,23 @@ runs:
     - name: Run verifier
       shell: bash
       env:
-        INPUT_EVENTID: ${{ inputs.eventId }}
+        INPUT_EVENTID: ${{ inputs.eventId || env.EVENT_ID }}
         INPUT_RELAYS: ${{ inputs.relays }}
         GITHUB_OUTPUT: ${{ github.output }}
       run: |
         # Create output file if it doesn't exist
         touch "$GITHUB_OUTPUT"
         
+        # Use environment variable if input is empty
+        EVENT_ID="${INPUT_EVENTID:-$EVENT_ID}"
+        
         # Debug input values
-        echo "Event ID: $INPUT_EVENTID"
+        echo "Event ID: $EVENT_ID"
         echo "Relays: $INPUT_RELAYS"
+        
+        if [ -z "$EVENT_ID" ]; then
+          echo "Error: No event ID provided"
+          exit 1
+        fi
         
         python ${{ github.action_path }}/verify_nip94.py

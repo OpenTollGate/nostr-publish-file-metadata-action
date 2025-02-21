@@ -60,8 +60,15 @@ def verify_event_on_relays(event_id: str, relays: list) -> bool:
 
 def main():
     # Get inputs from environment variables
-    event_id = os.environ.get('INPUT_EVENTID')
+    event_id = os.environ.get('INPUT_EVENTID') or os.environ.get('EVENT_ID')
+    if not event_id:
+        print("Error: Missing required inputs (eventId)")
+        sys.exit(1)
+
     relays = os.environ.get('INPUT_RELAYS', '').split(',')
+    if not relays or not relays[0]:
+        print("Error: Missing required inputs (relays)")
+        sys.exit(1)
     
     if not event_id or not relays:
         print("::error::Missing required inputs (eventId or relays)")
