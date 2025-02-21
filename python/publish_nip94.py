@@ -240,8 +240,8 @@ def main():
                 fh.write(f'eventId={event_id}\n')
                 print(f"noteId={note_id}", file=fh)
                 fh.write(f'noteId=note1{event_id}\n')
-            print(f"::set-output name=eventId::{event_id}")
-            print(f"::set-output name=noteId::note1{event_id}")
+            #print(f"::set-output name=eventId::{event_id}")
+            #print(f"::set-output name=noteId::note1{event_id}")
             print(f"Successfully wrote to GITHUB_OUTPUT file at {github_output}")
             with open(github_output, 'r') as fh:
                 print("GITHUB_OUTPUT contents post-write:")
