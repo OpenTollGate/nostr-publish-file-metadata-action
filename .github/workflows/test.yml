@@ -153,11 +153,14 @@ jobs:
           size: ${{ steps.upload.outputs.size }}
 
       - name: Debug Outputs
+        env:
+          EVENT_ID: ${{ steps.publish.outputs.eventId }}
+          NOTE_ID: ${{ steps.publish.outputs.noteId }}
         run: |
           echo "Publish step outputs:"
           echo "  eventId: '${{ steps.publish.outputs.eventId }}'"
           echo "  noteId: '${{ steps.publish.outputs.noteId }}'"
-    
+
           echo "Environment variables:"
           echo "EVENT_ID: $EVENT_ID"
           echo "NOTE_ID: $NOTE_ID"
