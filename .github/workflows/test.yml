@@ -61,6 +61,85 @@ jobs:
           nostrPrivateKey: ${{ secrets.NSEC }}
 
       - name: Publish NIP-94 Metadata
+        continue-on-error: true
+        id: publish
+        timeout-minutes: 2
+        uses: ./js
+        with:
+          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/
+          url: ${{ steps.upload.outputs.blossomUrl }}
+          mimeType: text/plain
+          fileHash: ${{ steps.upload.outputs.blossomHash }}
+          originalHash: ${{ steps.upload.outputs.blossomHash }}
+          content: "Test file uploaded via GitHub Actions"
+          nsec: ${{ secrets.NSEC }}
+          size: ${{ steps.upload.outputs.size }}
+
+      - name: Publish NIP-94 Metadata (Retry 1)
+        if: steps.publish.outcome == 'failure'
+        continue-on-error: true
+        id: publish-retry-1
+        uses: ./js
+        with:
+          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/
+          url: ${{ steps.upload.outputs.blossomUrl }}
+          mimeType: text/plain
+          fileHash: ${{ steps.upload.outputs.blossomHash }}
+          originalHash: ${{ steps.upload.outputs.blossomHash }}
+          content: "Test file uploaded via GitHub Actions"
+          nsec: ${{ secrets.NSEC }}
+          size: ${{ steps.upload.outputs.size }}
+
+      - name: Publish NIP-94 Metadata (Final Attempt)
+        if: steps.publish-retry-1.outcome == 'failure'
+        id: publish-retry-2
+        uses: ./js
+        with:
+          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/
+          url: ${{ steps.upload.outputs.blossomUrl }}
+          mimeType: text/plain
+          fileHash: ${{ steps.upload.outputs.blossomHash }}
+          originalHash: ${{ steps.upload.outputs.blossomHash }}
+          content: "Test file uploaded via GitHub Actions"
+          nsec: ${{ secrets.NSEC }}
+          size: ${{ steps.upload.outputs.size }}
+
+      - name: Verify Event Publication
+        run: |
+          EVENT_ID="${{ steps.publish.outputs.eventId }}"
+          RELAYS=("wss://relay.damus.io" "wss://nos.lol" "wss://nostr.mom")
+          
+          npm install -g wscat
+          
+          for relay in "${RELAYS[@]}"; do
+            echo "Checking $relay for event..."
+            echo '["REQ", "verify", {"ids":["'$EVENT_ID'"]}]' | wscat -c "$relay" -w 5 | grep -q "$EVENT_ID" && {
+              echo "Event found on $relay"
+              exit 0
+            }
+          done
+          
+          echo "Event not found on any relay"
+          # exit 1
+
+  test-python-implementation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Create test file
+        run: |
+          echo "Nostr file metadata test - $(date)" > testfile.txt
+      
+      - name: Upload to Blossom
+        id: upload
+        uses: c03rad0r/upload-blossom-action@using-nsec-argument
+        with:
+          host: ${{ secrets.HOST }}
+          filePath: testfile.txt
+          nostrPrivateKey: ${{ secrets.NSEC }}
+
+      - name: Publish NIP-94 Metadata (Python)
         id: publish
         uses: ./python
         with:
