@@ -62,22 +62,13 @@ runs:
         INPUT_DIMENSIONS: ${{ inputs.dimensions }}
         GITHUB_OUTPUT: ${{ github.output }}
       run: |
-        # Create output file if it doesn't exist
         touch "$GITHUB_OUTPUT"
-        
-        # Debug the environment
         echo "Running publisher with outputs to: $GITHUB_OUTPUT"
-        
-        # Run the publisher
         python ${{ github.action_path }}/publish_nip94.py
-        
-        # Debug the output file
-        echo "Contents of GITHUB_OUTPUT after publishing:"
-        cat "$GITHUB_OUTPUT"
-        
-        # Make sure the outputs are available to subsequent steps
         if [ -f "event_id.txt" ]; then
           EVENT_ID=$(cat event_id.txt)
           echo "eventId=$EVENT_ID" >> "$GITHUB_OUTPUT"
           echo "noteId=note1$EVENT_ID" >> "$GITHUB_OUTPUT"
         fi
+        echo "Contents of GITHUB_OUTPUT after publishing:"
+        cat "$GITHUB_OUTPUT"
