@@ -236,9 +236,9 @@ def main():
         if 'GITHUB_OUTPUT' in os.environ:
             github_output = os.environ['GITHUB_OUTPUT']
             with open(github_output, 'a') as fh:
-                print(f"eventId={event_id}", file=fh)
+                #print(f"eventId={event_id}", file=fh)
                 fh.write(f'eventId={event_id}\n')
-                print(f"noteId={note_id}", file=fh)
+                #print(f"noteId={note_id}", file=fh)
                 fh.write(f'noteId=note1{event_id}\n')
             #print(f"::set-output name=eventId::{event_id}")
             #print(f"::set-output name=noteId::note1{event_id}")
