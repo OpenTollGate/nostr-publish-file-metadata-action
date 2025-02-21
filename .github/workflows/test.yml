@@ -174,7 +174,7 @@ jobs:
           # Try to read from GITHUB_OUTPUT if it exists
           if [[ -f "$GITHUB_OUTPUT" ]]; then
             echo "Contents of GITHUB_OUTPUT:"
-            cat "$GITHUB_OUTPUT"
+            echo "$GITHUB_OUTPUT"
           fi
 
           echo "File contents:"
