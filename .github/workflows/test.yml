@@ -180,7 +180,7 @@ jobs:
           echo "File contents:"
           if [ -f event_id.txt ]; then
             # cat event_id.txt
-	    ls 
+            ls 
           fi
 
       - name: Store Event ID in Environment
