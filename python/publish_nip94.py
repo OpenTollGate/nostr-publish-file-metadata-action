@@ -226,13 +226,16 @@ def main():
         # Publish event
         results = publisher.publish_event(event)
         
-        # Set outputs using the new GitHub Actions format
+        # Set outputs using GitHub Actions Environment File
         if 'GITHUB_OUTPUT' in os.environ:
             with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
                 print(f"eventId={event.id}", file=fh)
                 print(f"noteId=note1{event.id}", file=fh)
-            print(f"::set-output name=eventId::{event.id}")
-        
+        else:
+            # Fallback for local testing
+            print(f"eventId={event.id}")
+            print(f"noteId=note1{event.id}")
+
         # Check if we had at least one successful publish
         successful_publishes = sum(1 for result in results.values() if result)
         if successful_publishes == 0:
