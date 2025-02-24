@@ -51,8 +51,7 @@ def verify_event_on_relays(event_id: str, relays: list) -> bool:
                             "created_at": event_msg.event.created_at,
                             "kind": event_msg.event.kind,
                             "content": event_msg.event.content,
-                            "tags": event_msg.event.tags,
-                            "sig": event_msg.event.sig,
+                            "tags": event_msg.event.tags
                         }
                         
                         print("\nEvent details:")
