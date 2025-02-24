@@ -213,8 +213,7 @@ def main():
             "created_at": event.created_at,
             "kind": event.kind,
             "tags": event.tags,
-            "content": event.content,
-            "architecture": event.architecture
+            "content": event.content
         }
         print("event: ", json.dumps(event_dict, indent=2))
 
