@@ -29,6 +29,9 @@ inputs:
   content:
     description: 'Description of the file content'
     required: false
+  architecture:
+    description: 'Architecture of the file (e.g., x86_64, arm64)'
+    required: false
 outputs:
   eventId:
     description: 'Raw Nostr event ID'
@@ -58,6 +61,7 @@ runs:
         INPUT_ORIGINALHASH: ${{ inputs.originalHash }}
         INPUT_NSEC: ${{ inputs.nsec }}
         INPUT_CONTENT: ${{ inputs.content }}
+        INPUT_ARCHITECTURE: ${{ inputs.architecture }}
         INPUT_SIZE: ${{ inputs.size }}
         INPUT_DIMENSIONS: ${{ inputs.dimensions }}
         GITHUB_OUTPUT: ${{ github.output }}

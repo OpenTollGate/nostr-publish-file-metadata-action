@@ -38,11 +38,25 @@ def verify_event_on_relays(event_id: str, relays: list) -> bool:
             
             # Wait and check for events
             check_start = time.time()
-            while time.time() - check_start < 10:  # 10 second timeout per relay
+            while time.time() - check_start < 10:
                 if relay_manager.message_pool.has_events():
                     event_msg = relay_manager.message_pool.get_event()
                     if event_msg.event.id == event_id:
                         print(f"✓ Event found on {relay_url}!")
+
+                        # Create event dictionary with all fields
+                        event_dict = {
+                            "id": event_msg.event.id,
+                            "pubkey": event_msg.event.public_key,
+                            "created_at": event_msg.event.created_at,
+                            "kind": event_msg.event.kind,
+                            "content": event_msg.event.content,
+                            "tags": event_msg.event.tags
+                        }
+                        
+                        print("\nEvent details:")
+                        print(json.dumps(event_dict, indent=2))
+                        
                         # Write to both output files
                         with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
                             fh.write("verify=true\n")

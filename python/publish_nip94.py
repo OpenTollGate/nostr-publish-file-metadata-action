@@ -25,11 +25,12 @@ class NIP94Publisher:
     def create_nip94_event(self, url: str, mime_type: str, file_hash: str,
                           original_hash: str, content: str = "",
                           size: Optional[int] = None,
-                          dimensions: Optional[str] = None) -> Event:
+                          dimensions: Optional[str] = None,
+                          architecture: Optional[str] = None) -> Event:
         """Create a NIP-94 event with the required metadata"""
-        
+
         print("Creating NIP-94 event...")
-        
+
         # Mandatory tags
         tags = [
             ["url", url],
@@ -43,6 +44,8 @@ class NIP94Publisher:
             tags.append(["size", str(size)])
         if dimensions:
             tags.append(["dim", dimensions])
+        if architecture:
+            tags.append(["arch", architecture])
 
         # Create event with kind 1063 (NIP-94)
         event = Event(
@@ -52,15 +55,6 @@ class NIP94Publisher:
             public_key=self.private_key.public_key.hex()
         )
 
-        """
-        event = Event(
-            content="Hello Nostr",
-            public_key=self.public_key_hex,
-            created_at=int(time.time()),
-            kind=1,
-            tags=[]
-        )
-        """
 
         # Sign the event
         self.private_key.sign_event(event)
@@ -196,6 +190,7 @@ def main():
     # Optional inputs
     content = os.environ.get('INPUT_CONTENT', '')
     dimensions = os.environ.get('INPUT_DIMENSIONS')
+    architecture = os.environ.get('INPUT_ARCHITECTURE')
 
     try:
         # Initialize publisher
@@ -208,7 +203,8 @@ def main():
             file_hash=file_hash,
             original_hash=original_hash,
             content=content,
-            dimensions=dimensions
+            dimensions=dimensions,
+            architecture=architecture
         )
 
         event_dict = {
