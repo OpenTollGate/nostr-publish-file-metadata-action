@@ -148,7 +148,8 @@ jobs:
           mimeType: "text/plain"
           fileHash: ${{ steps.upload.outputs.blossomHash }}
           originalHash: ${{ steps.upload.outputs.blossomHash }}
-          content: "Test file uploaded via GitHub Actions (Python)"
+          content: "This is a test file containing important data"
+          architecture: "x86_64"
           nsec: ${{ secrets.NSEC }}
           size: ${{ steps.upload.outputs.size }}
 
