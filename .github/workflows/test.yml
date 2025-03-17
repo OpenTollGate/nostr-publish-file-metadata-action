@@ -1,6 +1,5 @@
 name: Test NIP-94 Publishing
 on: [push, pull_request]
-
 jobs:
   test-javascript-nip94-publish:
     runs-on: ubuntu-latest
@@ -148,6 +147,7 @@ jobs:
           mimeType: "text/plain"
           fileHash: ${{ steps.upload.outputs.blossomHash }}
           originalHash: ${{ steps.upload.outputs.blossomHash }}
+          filename: "testfile.txt"
           content: "This is a test file containing important data"
           architecture: "x86_64"
           nsec: ${{ secrets.NSEC }}

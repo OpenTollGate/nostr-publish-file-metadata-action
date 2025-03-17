@@ -24,6 +24,7 @@ class NIP94Publisher:
 
     def create_nip94_event(self, url: str, mime_type: str, file_hash: str,
                           original_hash: str, content: str = "",
+                          filename: Optional[str] = None,
                           size: Optional[int] = None,
                           dimensions: Optional[str] = None,
                           architecture: Optional[str] = None) -> Event:
@@ -40,6 +41,8 @@ class NIP94Publisher:
         ]
 
         # Optional tags
+        if filename:
+            tags.append(["filename", filename])
         if size is not None:
             tags.append(["size", str(size)])
         if dimensions:
@@ -189,6 +192,7 @@ def main():
     
     # Optional inputs
     content = os.environ.get('INPUT_CONTENT', '')
+    filename = os.environ.get('INPUT_FILENAME')
     dimensions = os.environ.get('INPUT_DIMENSIONS')
     architecture = os.environ.get('INPUT_ARCHITECTURE')
 
@@ -203,6 +207,7 @@ def main():
             file_hash=file_hash,
             original_hash=original_hash,
             content=content,
+            filename=filename,
             dimensions=dimensions,
             architecture=architecture
         )
@@ -232,12 +237,8 @@ def main():
         if 'GITHUB_OUTPUT' in os.environ:
             github_output = os.environ['GITHUB_OUTPUT']
             with open(github_output, 'a') as fh:
-                #print(f"eventId={event_id}", file=fh)
                 fh.write(f'eventId={event_id}\n')
-                #print(f"noteId={note_id}", file=fh)
                 fh.write(f'noteId=note1{event_id}\n')
-            #print(f"::set-output name=eventId::{event_id}")
-            #print(f"::set-output name=noteId::note1{event_id}")
             print(f"Successfully wrote to GITHUB_OUTPUT file at {github_output}")
             with open(github_output, 'r') as fh:
                 print("GITHUB_OUTPUT contents post-write:")
