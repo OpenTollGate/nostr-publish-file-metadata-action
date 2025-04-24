@@ -28,12 +28,17 @@ runs:
           echo "SETUP_PYTHON=false" >> $GITHUB_ENV
         fi
 
+    - name: Skip python steup
+      run: |
+        echo "Using Python 3.12"
+      if: env.SETUP_PYTHON == 'true'
+    
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.12'
-      if: env.SETUP_PYTHON == 'true'
-    
+      if: env.SETUP_PYTHON == 'false'
+
     # skip nostr install if it is already available
     - name: Check if nostr is installed
       shell: bash
