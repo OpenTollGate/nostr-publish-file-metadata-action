@@ -17,7 +17,7 @@ inputs:
   originalHash:
     description: 'SHA-256 hash of the original file before any transformations'
     required: true
-  nsec_hex:
+  nsec:
     description: 'Nostr private key in hex format'
     required: true
   filename:
@@ -49,12 +49,12 @@ outputs:
 runs:
   using: 'composite'
   steps:
-    - name: Check if nsec_hex is empty
+    - name: Check if nsec is empty
       continue-on-error: true
       shell: bash
       run: |
-        if [ -z "${NSEC_HEX}" ]; then
-          echo "::error::nsec_hex is empty"
+        if [ -z "${nsec}" ]; then
+          echo "::error::nsec is empty"
           exit 1
         fi
 
@@ -99,7 +99,7 @@ runs:
         INPUT_MIMETYPE: ${{ inputs.mimeType }}
         INPUT_FILEHASH: ${{ inputs.fileHash }}
         INPUT_ORIGINALHASH: ${{ inputs.originalHash }}
-        INPUT_NSEC_HEX: ${{ inputs.nsec_hex }}
+        INPUT_NSEC_HEX: ${{ inputs.nsec }}
         INPUT_FILENAME: ${{ inputs.filename }}
         INPUT_CONTENT: ${{ inputs.content }}
         INPUT_ARCHITECTURE: ${{ inputs.architecture }}
