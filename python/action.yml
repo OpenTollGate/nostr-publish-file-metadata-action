@@ -17,7 +17,7 @@ inputs:
   originalHash:
     description: 'SHA-256 hash of the original file before any transformations'
     required: true
-  input_nsec_hex:
+  nsec_hex:
     description: 'Nostr private key in hex format'
     required: true
   filename:
@@ -47,7 +47,7 @@ runs:
       continue-on-error: true
       shell: bash
       run: |
-        if [ -z "${INPUT_NSEC_HEX}" ]; then
+        if [ -z "${NSEC_HEX}" ]; then
           echo "::error::nsec_hex is empty"
           exit 1
         fi
@@ -93,7 +93,7 @@ runs:
         INPUT_MIMETYPE: ${{ inputs.mimeType }}
         INPUT_FILEHASH: ${{ inputs.fileHash }}
         INPUT_ORIGINALHASH: ${{ inputs.originalHash }}
-        INPUT_NSEC_HEX: ${{ inputs.input_nsec_hex }}
+        INPUT_NSEC_HEX: ${{ inputs.NSEC_HEX }}
         INPUT_FILENAME: ${{ inputs.filename }}
         INPUT_CONTENT: ${{ inputs.content }}
         INPUT_ARCHITECTURE: ${{ inputs.architecture }}
@@ -103,7 +103,7 @@ runs:
       run: |
         touch "$GITHUB_OUTPUT"
         echo "Running publisher with outputs to: $GITHUB_OUTPUT"
-        python3 ${{ github.action_path }}/publish_nip94.py
+        python3 ${{ github.action_path }}/python/publish_nip94.py
 
         EVENT_ID=$(grep '^eventId=' "$GITHUB_OUTPUT" | cut -d= -f2)
         NOTE_ID=$(grep '^noteId=' "$GITHUB_OUTPUT" | cut -d= -f2)
