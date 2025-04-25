@@ -54,8 +54,7 @@ runs:
       shell: bash
       run: |
         if [ -z "${nsec}" ]; then
-          echo "::error::nsec is empty"
-          exit 1
+          echo "nsec is empty, Python script will generate a random one"
         fi
 
     # Skip pythons setup to save time when possible

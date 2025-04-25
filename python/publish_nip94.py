@@ -204,6 +204,7 @@ def main():
         random_private_key = PrivateKey(secrets.token_bytes(32))
         nsec_hex = random_private_key.hex()
         print(f"Generated random nsec_hex: {nsec_hex}")
+        sys.exit(1)
     else:
         print(f"nsec_hex is not empty")  # Debug print
 
