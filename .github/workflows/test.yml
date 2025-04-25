@@ -152,6 +152,8 @@ jobs:
           architecture: "x86_64"
           nsec: ${{ secrets.NSEC_HEX }}
           size: ${{ steps.upload.outputs.size }}
+          version: "1.0.0"
+          branch: "main"
 
       - name: Debug Outputs
         env:
