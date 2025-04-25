@@ -18,7 +18,7 @@ inputs:
     description: 'SHA-256 hash of the original file before any transformations'
     required: true
   nsec:
-    description: 'Nostr private key'
+    description: 'Nostr private key in hex format'
     required: true
   filename:
     description: 'Original filename of the file'
@@ -35,6 +35,15 @@ inputs:
   architecture:
     description: 'Architecture of the file (e.g., x86_64, arm64)'
     required: false
+  device_id:
+    description: 'Device ID for the package'
+    required: true
+  version:
+    description: 'Version of the package'
+    required: true
+  branch:
+    description: 'Branch or tag reference for the version'
+    required: true
 outputs:
   eventId:
     description: 'Raw Nostr event ID'
@@ -43,16 +52,46 @@ outputs:
 runs:
   using: 'composite'
   steps:
+    - name: Check if nsec is empty
+      continue-on-error: true
+      shell: bash
+      run: |
+        if [ -z "${nsec}" ]; then
+          echo "nsec is empty, Python script will generate a random one"
+        fi
+
+    # Skip pythons setup to save time when possible
+    - name: Check Python version
+      shell: bash
+      run: |
+        python_version=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "0.0")
+        echo "Detected Python version: $python_version"
+        if [[ "$python_version" != "3.12" ]]; then
+          echo "Python version is not 3.12, setting up Python 3.12"
+          echo "SETUP_PYTHON=true" >> $GITHUB_ENV
+        else
+          echo "Python version is 3.12, skipping setup"
+          echo "SETUP_PYTHON=false" >> $GITHUB_ENV
+        fi
+
     - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.x'
-    
+      shell: bash
+      run: |
+        echo "Using Python 3.12"
+      if: env.SETUP_PYTHON == 'true'
+
+    # skip nostr install if it is already available
+    - name: Check if nostr is installed
+      shell: bash
+      run: |
+        python3 -c "import nostr" 2>/dev/null && echo "NOSTR_INSTALLED=true" >> $GITHUB_ENV || echo "NOSTR_INSTALLED=false" >> $GITHUB_ENV
+
     - name: Install dependencies
       shell: bash
       run: |
-        python -m pip install --upgrade pip
-        pip install nostr
+        python3 -m pip install --upgrade pip
+        python3 -m pip install nostr
+      if: env.NOSTR_INSTALLED == 'false'
 
     - name: Run publisher
       shell: bash
@@ -62,17 +101,20 @@ runs:
         INPUT_MIMETYPE: ${{ inputs.mimeType }}
         INPUT_FILEHASH: ${{ inputs.fileHash }}
         INPUT_ORIGINALHASH: ${{ inputs.originalHash }}
-        INPUT_NSEC: ${{ inputs.nsec }}
+        INPUT_NSEC_HEX: ${{ inputs.nsec }}
         INPUT_FILENAME: ${{ inputs.filename }}
         INPUT_CONTENT: ${{ inputs.content }}
         INPUT_ARCHITECTURE: ${{ inputs.architecture }}
         INPUT_SIZE: ${{ inputs.size }}
         INPUT_DIMENSIONS: ${{ inputs.dimensions }}
+        INPUT_VERSION: ${{ inputs.version }}
+        INPUT_BRANCH: ${{ inputs.branch }}
+        INPUT_DEVICE_ID: ${{ inputs.device_id }}
         GITHUB_OUTPUT: ${{ github.output }}
       run: |
         touch "$GITHUB_OUTPUT"
         echo "Running publisher with outputs to: $GITHUB_OUTPUT"
-        python ${{ github.action_path }}/publish_nip94.py
+        python3 ${{ github.action_path }}/publish_nip94.py
 
         EVENT_ID=$(grep '^eventId=' "$GITHUB_OUTPUT" | cut -d= -f2)
         NOTE_ID=$(grep '^noteId=' "$GITHUB_OUTPUT" | cut -d= -f2)

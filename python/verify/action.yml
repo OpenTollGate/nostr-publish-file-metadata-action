@@ -14,16 +14,37 @@ outputs:
 runs:
   using: 'composite'
   steps:
+    # Skip pythons setup to save time when possible
+    - name: Check Python version
+      shell: bash
+      run: |
+        python_version=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "0.0")
+        echo "Detected Python version: $python_version"
+        if [[ "$python_version" != "3.12" ]]; then
+          echo "Python version is not 3.12, setting up Python 3.12"
+          echo "SETUP_PYTHON=true" >> $GITHUB_ENV
+        else
+          echo "Python version is 3.12, skipping setup"
+          echo "SETUP_PYTHON=false" >> $GITHUB_ENV
+        fi
+
+    - name: Skip python setup
+      shell: bash
+      run: |
+        echo "Using Python 3.12"
+      if: env.SETUP_PYTHON == 'true'
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.x'
-    
+        python-version: '3.12'
+      if: env.SETUP_PYTHON == 'false'
+
     - name: Install dependencies
       shell: bash
       run: |
-        python -m pip install --upgrade pip
-        pip install nostr
+        python3 -m pip install --upgrade pip
+        python3 -m pip install nostr
 
     - name: Run verifier
       shell: bash
@@ -45,7 +66,7 @@ runs:
           exit 1
         fi
         
-        python ${{ github.action_path }}/verify_nip94.py
+        python3 ${{ github.action_path }}/verify_nip94.py
         
         # Write both to GITHUB_OUTPUT and GITHUB_ENV
         echo "verify=${verify}" >> $GITHUB_OUTPUT

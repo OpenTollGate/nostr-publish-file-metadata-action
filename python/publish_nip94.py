@@ -5,10 +5,12 @@ import sys
 import json
 import time
 import ssl
+
 from typing import Optional, Dict, List
 from nostr.event import Event
 from nostr.key import PrivateKey
 from nostr.relay_manager import RelayManager
+import secrets
 
 class NIP94Publisher:
     def __init__(self, relays: List[str], private_key_hex: str):
@@ -23,11 +25,14 @@ class NIP94Publisher:
         print(f"Public Key (bech32): {self.public_key_bech32}")
 
     def create_nip94_event(self, url: str, mime_type: str, file_hash: str,
-                          original_hash: str, content: str = "",
-                          filename: Optional[str] = None,
-                          size: Optional[int] = None,
-                          dimensions: Optional[str] = None,
-                          architecture: Optional[str] = None) -> Event:
+                           original_hash: str, content: str = "",
+                           filename: Optional[str] = None,
+                           size: Optional[int] = None,
+                           dimensions: Optional[str] = None,
+                           architecture: Optional[str] = None,
+                           version: Optional[str] = None,
+                           branch: Optional[str] = None,
+                           device_id: Optional[str] = None) -> Event:
         """Create a NIP-94 event with the required metadata"""
 
         print("Creating NIP-94 event...")
@@ -49,6 +54,12 @@ class NIP94Publisher:
             tags.append(["dim", dimensions])
         if architecture:
             tags.append(["arch", architecture])
+        if version:
+            tags.append(["version", version])
+        if branch:
+            tags.append(["branch", branch])
+        if device_id:
+            tags.append(["id", device_id])
 
         # Create event with kind 1063 (NIP-94)
         event = Event(
@@ -110,7 +121,7 @@ class NIP94Publisher:
                         time.sleep(0.5)  # Give time for clean closure
                     except Exception as e:
                         print(f"Error closing connection to {relay_url}: {e}")
-                    
+
         # Print summary
         successful = sum(1 for result in results.values() if result)
         print(f"\nPublishing Summary:")
@@ -173,7 +184,7 @@ def main():
         'INPUT_MIMETYPE',
         'INPUT_FILEHASH',
         'INPUT_ORIGINALHASH',
-        'INPUT_NSEC'
+        'INPUT_NSEC_HEX'
     ]
 
     # Validate required inputs
@@ -188,17 +199,30 @@ def main():
     mime_type = os.environ['INPUT_MIMETYPE']
     file_hash = os.environ['INPUT_FILEHASH']
     original_hash = os.environ['INPUT_ORIGINALHASH']
-    nsec = os.environ['INPUT_NSEC']
+    nsec_hex = os.environ.get('INPUT_NSEC_HEX', '')  # Default to empty string if not set
     
+    
+    if not nsec_hex:
+        print("nsec_hex is empty, generating a random one...")
+        random_private_key = PrivateKey(secrets.token_bytes(32))
+        nsec_hex = random_private_key.hex()
+        print(f"Generated random nsec_hex: {nsec_hex}")
+        sys.exit(1)
+    else:
+        print(f"nsec_hex is not empty")  # Debug print
+
     # Optional inputs
     content = os.environ.get('INPUT_CONTENT', '')
     filename = os.environ.get('INPUT_FILENAME')
     dimensions = os.environ.get('INPUT_DIMENSIONS')
     architecture = os.environ.get('INPUT_ARCHITECTURE')
+    version = os.environ.get('INPUT_VERSION')
+    branch = os.environ.get('INPUT_BRANCH')
+    device_id = os.environ.get('INPUT_DEVICE_ID')
 
     try:
         # Initialize publisher
-        publisher = NIP94Publisher(relays, nsec)
+        publisher = NIP94Publisher(relays, nsec_hex)
         
         # Create NIP-94 event
         event = publisher.create_nip94_event(
@@ -209,7 +233,10 @@ def main():
             content=content,
             filename=filename,
             dimensions=dimensions,
-            architecture=architecture
+            architecture=architecture,
+            version=version,
+            branch=branch,
+            device_id=device_id
         )
 
         event_dict = {
