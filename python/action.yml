@@ -83,7 +83,7 @@ runs:
         INPUT_MIMETYPE: ${{ inputs.mimeType }}
         INPUT_FILEHASH: ${{ inputs.fileHash }}
         INPUT_ORIGINALHASH: ${{ inputs.originalHash }}
-        INPUT_NSEC: ${{ inputs.nsec }}
+        INPUT_NSEC_HEX: ${{ inputs.nsec }}
         INPUT_FILENAME: ${{ inputs.filename }}
         INPUT_CONTENT: ${{ inputs.content }}
         INPUT_ARCHITECTURE: ${{ inputs.architecture }}
