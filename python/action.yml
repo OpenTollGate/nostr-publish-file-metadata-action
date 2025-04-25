@@ -43,6 +43,14 @@ outputs:
 runs:
   using: 'composite'
   steps:
+    - name: Check if nsec_hex is empty
+      shell: bash
+      run: |
+        if [ -z "${INPUT_NSEC_HEX}" ]; then
+          echo "::error::nsec_hex is empty"
+          exit 1
+        fi
+
     # Skip pythons setup to save time when possible
     - name: Check Python version
       shell: bash
