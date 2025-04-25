@@ -23,11 +23,11 @@ class NIP94Publisher:
         print(f"Public Key (bech32): {self.public_key_bech32}")
 
     def create_nip94_event(self, url: str, mime_type: str, file_hash: str,
-                          original_hash: str, content: str = "",
-                          filename: Optional[str] = None,
-                          size: Optional[int] = None,
-                          dimensions: Optional[str] = None,
-                          architecture: Optional[str] = None) -> Event:
+                           original_hash: str, content: str = "",
+                           filename: Optional[str] = None,
+                           size: Optional[int] = None,
+                           dimensions: Optional[str] = None,
+                           architecture: Optional[str] = None) -> Event:
         """Create a NIP-94 event with the required metadata"""
 
         print("Creating NIP-94 event...")
@@ -173,7 +173,7 @@ def main():
         'INPUT_MIMETYPE',
         'INPUT_FILEHASH',
         'INPUT_ORIGINALHASH',
-        'INPUT_NSEC'
+        'INPUT_NSEC_HEX'
     ]
 
     # Validate required inputs
@@ -188,8 +188,10 @@ def main():
     mime_type = os.environ['INPUT_MIMETYPE']
     file_hash = os.environ['INPUT_FILEHASH']
     original_hash = os.environ['INPUT_ORIGINALHASH']
-    nsec = os.environ['INPUT_NSEC']
+    nsec_hex = os.environ['INPUT_NSEC_HEX']
     
+    print(f"nsec_hex (INPUT_NSEC_HEX): {nsec_hex}")  # Debug print
+
     # Optional inputs
     content = os.environ.get('INPUT_CONTENT', '')
     filename = os.environ.get('INPUT_FILENAME')
@@ -198,7 +200,7 @@ def main():
 
     try:
         # Initialize publisher
-        publisher = NIP94Publisher(relays, nsec)
+        publisher = NIP94Publisher(relays, nsec_hex)
         
         # Create NIP-94 event
         event = publisher.create_nip94_event(
