@@ -59,7 +59,7 @@ class NIP94Publisher:
         if branch:
             tags.append(["branch", branch])
         if device_id:
-            tags.append(["d", device_id])
+            tags.append(["id", device_id])
 
         # Create event with kind 1063 (NIP-94)
         event = Event(
