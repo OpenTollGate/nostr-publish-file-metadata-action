@@ -17,8 +17,8 @@ inputs:
   originalHash:
     description: 'SHA-256 hash of the original file before any transformations'
     required: true
-  nsec:
-    description: 'Nostr private key'
+  input_nsec_hex:
+    description: 'Nostr private key in hex format'
     required: true
   filename:
     description: 'Original filename of the file'
@@ -83,7 +83,7 @@ runs:
         INPUT_MIMETYPE: ${{ inputs.mimeType }}
         INPUT_FILEHASH: ${{ inputs.fileHash }}
         INPUT_ORIGINALHASH: ${{ inputs.originalHash }}
-        INPUT_NSEC_HEX: ${{ inputs.nsec }}
+        INPUT_NSEC_HEX: ${{ inputs.input_nsec_hex }}
         INPUT_FILENAME: ${{ inputs.filename }}
         INPUT_CONTENT: ${{ inputs.content }}
         INPUT_ARCHITECTURE: ${{ inputs.architecture }}

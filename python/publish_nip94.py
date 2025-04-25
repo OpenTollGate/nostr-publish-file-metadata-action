@@ -188,10 +188,14 @@ def main():
     mime_type = os.environ['INPUT_MIMETYPE']
     file_hash = os.environ['INPUT_FILEHASH']
     original_hash = os.environ['INPUT_ORIGINALHASH']
-    nsec_hex = os.environ['INPUT_NSEC_HEX']
+    nsec_hex = os.environ.get('INPUT_NSEC_HEX', '')  # Default to empty string if not set
     
     print(f"nsec_hex (INPUT_NSEC_HEX): {nsec_hex}")  # Debug print
-
+    
+    if not nsec_hex:
+        print("::error::nsec_hex is empty")
+        sys.exit(1)
+    
     # Optional inputs
     content = os.environ.get('INPUT_CONTENT', '')
     filename = os.environ.get('INPUT_FILENAME')
