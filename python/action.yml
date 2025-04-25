@@ -47,13 +47,13 @@ runs:
     - name: Check Python version
       shell: bash
       run: |
-        python_version=$(python3.12 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "0.0")
+        python_version=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "0.0")
         echo "Detected Python version: $python_version"
-        if [[ "$python_version" =~ ^[0-2]\. || "$python_version" == "3.0" || "$python_version" == "3.1" || "$python_version" == "3.2" || "$python_version" == "3.3" || "$python_version" == "3.4" || "$python_version" == "3.5" || "$python_version" == "3.6" || "$python_version" == "3.7" || "$python_version" == "3.8" || "$python_version" == "3.9" || "$python_version" == "3.10" || "$python_version" == "3.11" ]]; then
-          echo "Python version is less than 3.12, setting up Python 3.12"
+        if [[ "$python_version" != "3.12" ]]; then
+          echo "Python version is not 3.12, setting up Python 3.12"
           echo "SETUP_PYTHON=true" >> $GITHUB_ENV
         else
-          echo "Python version is 3.12 or higher, skipping setup"
+          echo "Python version is 3.12, skipping setup"
           echo "SETUP_PYTHON=false" >> $GITHUB_ENV
         fi
 
@@ -61,18 +61,18 @@ runs:
       run: |
         echo "Using Python 3.12"
       if: env.SETUP_PYTHON == 'true'
-    
+
     # skip nostr install if it is already available
     - name: Check if nostr is installed
       shell: bash
       run: |
-        python3.12 -c "import nostr" 2>/dev/null && echo "NOSTR_INSTALLED=true" >> $GITHUB_ENV || echo "NOSTR_INSTALLED=false" >> $GITHUB_ENV
+        python3 -c "import nostr" 2>/dev/null && echo "NOSTR_INSTALLED=true" >> $GITHUB_ENV || echo "NOSTR_INSTALLED=false" >> $GITHUB_ENV
 
     - name: Install dependencies
       shell: bash
       run: |
-        python3.12 -m pip install --upgrade pip
-        python3.12 -m pip install nostr
+        python3 -m pip install --upgrade pip
+        python3 -m pip install nostr
       if: env.NOSTR_INSTALLED == 'false'
 
     - name: Run publisher
@@ -93,7 +93,7 @@ runs:
       run: |
         touch "$GITHUB_OUTPUT"
         echo "Running publisher with outputs to: $GITHUB_OUTPUT"
-        python3.12 ${{ github.action_path }}/publish_nip94.py
+        python3 ${{ github.action_path }}/publish_nip94.py
 
         EVENT_ID=$(grep '^eventId=' "$GITHUB_OUTPUT" | cut -d= -f2)
         NOTE_ID=$(grep '^noteId=' "$GITHUB_OUTPUT" | cut -d= -f2)
