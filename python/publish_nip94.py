@@ -5,10 +5,12 @@ import sys
 import json
 import time
 import ssl
+
 from typing import Optional, Dict, List
 from nostr.event import Event
 from nostr.key import PrivateKey
 from nostr.relay_manager import RelayManager
+import secrets
 
 class NIP94Publisher:
     def __init__(self, relays: List[str], private_key_hex: str):
@@ -192,8 +194,10 @@ def main():
     
     
     if not nsec_hex:
-        print("::error::nsec_hex is empty")
-        sys.exit(1)
+        print("nsec_hex is empty, generating a random one...")
+        random_private_key = PrivateKey(secrets.token_bytes(32))
+        nsec_hex = random_private_key.hex()
+        print(f"Generated random nsec_hex: {nsec_hex}")
     else:
         print(f"nsec_hex is not empty")  # Debug print
 
