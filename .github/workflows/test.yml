@@ -71,7 +71,7 @@ jobs:
           fileHash: ${{ steps.upload.outputs.blossomHash }}
           originalHash: ${{ steps.upload.outputs.blossomHash }}
           content: "Test file uploaded via GitHub Actions"
-          nsec: ${{ secrets.NSEC }}
+          nsec_hex: ${{ secrets.NSEC }}
           size: ${{ steps.upload.outputs.size }}
 
       - name: Publish NIP-94 Metadata (Retry 1)
@@ -86,7 +86,7 @@ jobs:
           fileHash: ${{ steps.upload.outputs.blossomHash }}
           originalHash: ${{ steps.upload.outputs.blossomHash }}
           content: "Test file uploaded via GitHub Actions"
-          nsec: ${{ secrets.NSEC_HEX }}
+          nsec_hex: ${{ secrets.NSEC_HEX }}
           size: ${{ steps.upload.outputs.size }}
 
       - name: Publish NIP-94 Metadata (Final Attempt)
@@ -100,7 +100,7 @@ jobs:
           fileHash: ${{ steps.upload.outputs.blossomHash }}
           originalHash: ${{ steps.upload.outputs.blossomHash }}
           content: "Test file uploaded via GitHub Actions"
-          nsec: ${{ secrets.NSEC_HEX }}
+          nsec_hex: ${{ secrets.NSEC_HEX }}
           size: ${{ steps.upload.outputs.size }}
 
       - name: Verify Event Publication
@@ -150,7 +150,7 @@ jobs:
           filename: "testfile.txt"
           content: "This is a test file containing important data"
           architecture: "x86_64"
-          nsec: ${{ secrets.NSEC_HEX }}
+          nsec_hex: ${{ secrets.NSEC_HEX }}
           size: ${{ steps.upload.outputs.size }}
 
       - name: Debug Outputs
