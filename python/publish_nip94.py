@@ -29,7 +29,9 @@ class NIP94Publisher:
                            filename: Optional[str] = None,
                            size: Optional[int] = None,
                            dimensions: Optional[str] = None,
-                           architecture: Optional[str] = None) -> Event:
+                           architecture: Optional[str] = None,
+                           version: Optional[str] = None,
+                           branch: Optional[str] = None) -> Event:
         """Create a NIP-94 event with the required metadata"""
 
         print("Creating NIP-94 event...")
@@ -51,6 +53,10 @@ class NIP94Publisher:
             tags.append(["dim", dimensions])
         if architecture:
             tags.append(["arch", architecture])
+        if version:
+            tags.append(["version", version])
+        if branch:
+            tags.append(["branch", branch])
 
         # Create event with kind 1063 (NIP-94)
         event = Event(
@@ -206,6 +212,8 @@ def main():
     filename = os.environ.get('INPUT_FILENAME')
     dimensions = os.environ.get('INPUT_DIMENSIONS')
     architecture = os.environ.get('INPUT_ARCHITECTURE')
+    version = os.environ.get('INPUT_VERSION')
+    branch = os.environ.get('INPUT_BRANCH')
 
     try:
         # Initialize publisher
@@ -220,7 +228,9 @@ def main():
             content=content,
             filename=filename,
             dimensions=dimensions,
-            architecture=architecture
+            architecture=architecture,
+            version=version,
+            branch=branch
         )
 
         event_dict = {

@@ -35,6 +35,12 @@ inputs:
   architecture:
     description: 'Architecture of the file (e.g., x86_64, arm64)'
     required: false
+  version:
+    description: 'Version of the package'
+    required: true
+  branch:
+    description: 'Branch or tag reference for the version'
+    required: true
 outputs:
   eventId:
     description: 'Raw Nostr event ID'
@@ -99,11 +105,13 @@ runs:
         INPUT_ARCHITECTURE: ${{ inputs.architecture }}
         INPUT_SIZE: ${{ inputs.size }}
         INPUT_DIMENSIONS: ${{ inputs.dimensions }}
+        INPUT_VERSION: ${{ inputs.version }}
+        INPUT_BRANCH: ${{ inputs.branch }}
         GITHUB_OUTPUT: ${{ github.output }}
       run: |
         touch "$GITHUB_OUTPUT"
         echo "Running publisher with outputs to: $GITHUB_OUTPUT"
-        python3 ${{ github.action_path }}/python/publish_nip94.py
+        python3 ${{ github.action_path }}/publish_nip94.py
 
         EVENT_ID=$(grep '^eventId=' "$GITHUB_OUTPUT" | cut -d= -f2)
         NOTE_ID=$(grep '^noteId=' "$GITHUB_OUTPUT" | cut -d= -f2)
