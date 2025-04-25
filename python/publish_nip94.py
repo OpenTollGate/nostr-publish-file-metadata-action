@@ -56,8 +56,6 @@ class NIP94Publisher:
             tags.append(["arch", architecture])
         if version:
             tags.append(["version", version])
-:start_line:59
--------
         if branch:
             tags.append(["branch", branch])
         if device_id:
