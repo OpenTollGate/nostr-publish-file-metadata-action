@@ -38,7 +38,7 @@ jobs:
         with:
           host: ${{ secrets.HOST }}
           filePath: testfile.txt
-          nostrPrivateKey: ${{ secrets.NSEC }}
+          nostrPrivateKey: ${{ secrets.NSEC_HEX }}
 
       - name: Upload to Blossom (Retry 1)
         id: upload-retry-1
@@ -48,7 +48,7 @@ jobs:
         with:
           host: ${{ secrets.HOST }}
           filePath: testfile.txt
-          nostrPrivateKey: ${{ secrets.NSEC }}
+          nostrPrivateKey: ${{ secrets.NSEC_HEX }}
 
       - name: Upload to Blossom (Final Attempt)
         id: upload-retry-2
@@ -57,7 +57,7 @@ jobs:
         with:
           host: ${{ secrets.HOST }}
           filePath: testfile.txt
-          nostrPrivateKey: ${{ secrets.NSEC }}
+          nostrPrivateKey: ${{ secrets.NSEC_HEX }}
 
       - name: Publish NIP-94 Metadata
         continue-on-error: true
@@ -86,7 +86,7 @@ jobs:
           fileHash: ${{ steps.upload.outputs.blossomHash }}
           originalHash: ${{ steps.upload.outputs.blossomHash }}
           content: "Test file uploaded via GitHub Actions"
-          nsec: ${{ secrets.NSEC }}
+          nsec: ${{ secrets.NSEC_HEX }}
           size: ${{ steps.upload.outputs.size }}
 
       - name: Publish NIP-94 Metadata (Final Attempt)
@@ -100,7 +100,7 @@ jobs:
           fileHash: ${{ steps.upload.outputs.blossomHash }}
           originalHash: ${{ steps.upload.outputs.blossomHash }}
           content: "Test file uploaded via GitHub Actions"
-          nsec: ${{ secrets.NSEC }}
+          nsec: ${{ secrets.NSEC_HEX }}
           size: ${{ steps.upload.outputs.size }}
 
       - name: Verify Event Publication
@@ -136,7 +136,7 @@ jobs:
         with:
           host: ${{ secrets.HOST }}
           filePath: testfile.txt
-          nostrPrivateKey: ${{ secrets.NSEC }}
+          nostrPrivateKey: ${{ secrets.NSEC_HEX }}
 
       - name: Publish NIP-94 Metadata (Python)
         id: publish
@@ -150,7 +150,7 @@ jobs:
           filename: "testfile.txt"
           content: "This is a test file containing important data"
           architecture: "x86_64"
-          nsec: ${{ secrets.NSEC }}
+          nsec: ${{ secrets.NSEC_HEX }}
           size: ${{ steps.upload.outputs.size }}
 
       - name: Debug Outputs
