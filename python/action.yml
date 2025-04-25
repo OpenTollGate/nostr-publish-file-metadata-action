@@ -35,6 +35,9 @@ inputs:
   architecture:
     description: 'Architecture of the file (e.g., x86_64, arm64)'
     required: false
+  device_id:
+    description: 'Device ID for the package'
+    required: true
   version:
     description: 'Version of the package'
     required: true
@@ -106,6 +109,7 @@ runs:
         INPUT_DIMENSIONS: ${{ inputs.dimensions }}
         INPUT_VERSION: ${{ inputs.version }}
         INPUT_BRANCH: ${{ inputs.branch }}
+        INPUT_DEVICE_ID: ${{ inputs.device_id }}
         GITHUB_OUTPUT: ${{ github.output }}
       run: |
         touch "$GITHUB_OUTPUT"

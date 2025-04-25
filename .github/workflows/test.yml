@@ -150,6 +150,7 @@ jobs:
           filename: "testfile.txt"
           content: "This is a test file containing important data"
           architecture: "x86_64"
+          device_id: "glinet_mt3000"
           nsec: ${{ secrets.NSEC_HEX }}
           size: ${{ steps.upload.outputs.size }}
           version: "1.0.0"

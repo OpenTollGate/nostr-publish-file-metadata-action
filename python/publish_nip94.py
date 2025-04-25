@@ -31,7 +31,8 @@ class NIP94Publisher:
                            dimensions: Optional[str] = None,
                            architecture: Optional[str] = None,
                            version: Optional[str] = None,
-                           branch: Optional[str] = None) -> Event:
+                           branch: Optional[str] = None,
+                           device_id: Optional[str] = None) -> Event:
         """Create a NIP-94 event with the required metadata"""
 
         print("Creating NIP-94 event...")
@@ -55,8 +56,12 @@ class NIP94Publisher:
             tags.append(["arch", architecture])
         if version:
             tags.append(["version", version])
+:start_line:59
+-------
         if branch:
             tags.append(["branch", branch])
+        if device_id:
+            tags.append(["d", device_id])
 
         # Create event with kind 1063 (NIP-94)
         event = Event(
@@ -215,6 +220,7 @@ def main():
     architecture = os.environ.get('INPUT_ARCHITECTURE')
     version = os.environ.get('INPUT_VERSION')
     branch = os.environ.get('INPUT_BRANCH')
+    device_id = os.environ.get('INPUT_DEVICE_ID')
 
     try:
         # Initialize publisher
@@ -231,7 +237,8 @@ def main():
             dimensions=dimensions,
             architecture=architecture,
             version=version,
-            branch=branch
+            branch=branch,
+            device_id=device_id
         )
 
         event_dict = {
