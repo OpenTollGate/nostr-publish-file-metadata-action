@@ -29,6 +29,7 @@ runs:
         fi
 
     - name: Skip python setup
+      shell: bash
       run: |
         echo "Using Python 3.12"
       if: env.SETUP_PYTHON == 'true'
