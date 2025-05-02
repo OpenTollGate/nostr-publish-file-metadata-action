@@ -264,7 +264,7 @@ def main():
         results = publisher.publish_event(event)
 
         # Set outputs using GitHub Actions Environment File and as fallback save to file
-        set_output("event_id", event.id)
+        set_output("eventId", event.id)
 
         # Check if we had at least one successful publish
         successful_publishes = sum(1 for result in results.values() if result)

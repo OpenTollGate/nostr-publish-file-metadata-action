@@ -37,7 +37,8 @@ jobs:
       - name: Debug Outputs
         run: |
           echo "Publish step outputs:"
-          echo "  eventId: '${{ steps.publish.outputs.event_id }}'"
+          echo "  eventId: '${{ steps.publish.outputs.eventId }}'"
+          echo "EVENT_ID=${{ steps.publish.outputs.eventId }}" >> $GITHUB_ENV
 
           echo "Upload step outputs:"
           echo "  blossomUrl: '${{ steps.upload.outputs.blossomUrl }}'"
@@ -47,22 +48,7 @@ jobs:
           echo "===== Debug Publish Step ====="
           echo "Publish step status: ${{ steps.publish.outcome }}"
           echo "Publish step result: ${{ steps.publish.result }}"
-          
-          # Try to read from GITHUB_OUTPUT if it exists
-          if [[ -f "$GITHUB_OUTPUT" ]]; then
-            echo "Contents of GITHUB_OUTPUT:"
-            echo "$GITHUB_OUTPUT"
-          fi
-
-          echo "File contents:"
-          if [ -f event_id.txt ]; then
-            cat event_id.txt
-          fi
-
-#      - name: Store Event ID in Environment
-#        run: |
-#          EVENT_ID=${{ steps.publish.outputs.eventId }}
-#          echo "EVENT_ID=${EVENT_ID}" >> $GITHUB_ENV
+        
 
       - name: Verify NIP-94 Event
         id: verify

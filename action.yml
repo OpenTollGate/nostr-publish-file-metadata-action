@@ -33,10 +33,8 @@ inputs:
     description: 'Custom tags as key=value pairs, one per line. Use >- YAML operator for multiline input.'
     required: false
 outputs:
-  event_id:
+  eventId:
     description: 'Raw Nostr event ID'
-  noteId:
-    description: 'Bech32-encoded note ID (note1...)'
 runs:
   using: 'composite'
   steps:
@@ -73,11 +71,5 @@ runs:
 
     - name: Run publisher
       shell: bash
-      env:
-        INPUT_ARCHITECTURE: ${{ inputs.architecture }}
-        INPUT_VERSION: ${{ inputs.version }}
-        INPUT_BRANCH: ${{ inputs.branch }}
-        INPUT_DEVICE_ID: ${{ inputs.device_id }}
-        GITHUB_OUTPUT: ${{ github.output }}
       run: |
-        echo 'bla:  ${{ steps.publish-nip94.outputs.event_id }}'
+        echo 'bla:  ${{ steps.publish-nip94.outputs.eventId }}'
