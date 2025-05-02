@@ -208,102 +208,102 @@ def main():
     custom_tags_json = os.environ.get('INPUT_CUSTOM_TAGS_JSON')
     
     # Debug print the raw JSON string
-    print(f"Raw custom tags JSON: {repr(custom_tags_json)}")
+    print(f"Raw custom tags JSON: {custom_tags_json}")
     
     # Parse and validate custom tags JSON if provided
-    custom_tags = {}
-    if custom_tags_json:
-        try:
-            # Clean the input string if needed
-            # Sometimes multiline environment variables contain extra whitespace or quotes
-            cleaned_json = custom_tags_json.strip()
+    custom_tags = custom_tags_json
+    # if custom_tags_json:
+    #     try:
+    #         # Clean the input string if needed
+    #         # Sometimes multiline environment variables contain extra whitespace or quotes
+    #         cleaned_json = custom_tags_json.strip()
             
-            # If the string starts and ends with single quotes, remove them
-            if (cleaned_json.startswith("'") and cleaned_json.endswith("'")) or \
-               (cleaned_json.startswith('"') and cleaned_json.endswith('"')):
-                cleaned_json = cleaned_json[1:-1]
+    #         # If the string starts and ends with single quotes, remove them
+    #         if (cleaned_json.startswith("'") and cleaned_json.endswith("'")) or \
+    #            (cleaned_json.startswith('"') and cleaned_json.endswith('"')):
+    #             cleaned_json = cleaned_json[1:-1]
                 
-            # Replace newlines with spaces to handle multi-line JSON strings
-            # GitHub Actions may preserve these newlines in the environment variable
-            cleaned_json = cleaned_json.replace('\n', ' ')
+    #         # Replace newlines with spaces to handle multi-line JSON strings
+    #         # GitHub Actions may preserve these newlines in the environment variable
+    #         cleaned_json = cleaned_json.replace('\n', ' ')
             
-            # Also compress multiple spaces to single spaces
-            import re
-            cleaned_json = re.sub(r'\s+', ' ', cleaned_json)
+    #         # Also compress multiple spaces to single spaces
+    #         import re
+    #         cleaned_json = re.sub(r'\s+', ' ', cleaned_json)
             
-            print(f"Cleaned JSON string: {repr(cleaned_json)}")
+    #         print(f"Cleaned JSON string: {repr(cleaned_json)}")
             
-            # Extreme case: Try to completely reconstruct the JSON from scratch
-            # This is a more aggressive approach for severely malformed JSON
-            try:
-                # First try direct parsing
-                parsed_json = json.loads(cleaned_json)
-            except json.JSONDecodeError as e:
-                print(f"Initial JSON parsing failed: {str(e)}")
+    #         # Extreme case: Try to completely reconstruct the JSON from scratch
+    #         # This is a more aggressive approach for severely malformed JSON
+    #         try:
+    #             # First try direct parsing
+    #             parsed_json = json.loads(cleaned_json)
+    #         except json.JSONDecodeError as e:
+    #             print(f"Initial JSON parsing failed: {str(e)}")
                 
-                try:
-                    # More sophisticated JSON repair attempt
-                    # Extract key-value pairs using pattern matching for severely malformed JSON
-                    # This handles cases where quotes are missing on both keys and values
-                    pairs = {}
+    #             try:
+    #                 # More sophisticated JSON repair attempt
+    #                 # Extract key-value pairs using pattern matching for severely malformed JSON
+    #                 # This handles cases where quotes are missing on both keys and values
+    #                 pairs = {}
                     
-                    # If it looks like a JSON object (has curly braces)
-                    if '{' in cleaned_json and '}' in cleaned_json:
-                        # Strip outer braces and split by commas
-                        content = cleaned_json.strip()
-                        if content.startswith('{'): content = content[1:]
-                        if content.endswith('}'): content = content[:-1]
+    #                 # If it looks like a JSON object (has curly braces)
+    #                 if '{' in cleaned_json and '}' in cleaned_json:
+    #                     # Strip outer braces and split by commas
+    #                     content = cleaned_json.strip()
+    #                     if content.startswith('{'): content = content[1:]
+    #                     if content.endswith('}'): content = content[:-1]
                         
-                        # Split by commas and process each key-value pair
-                        for pair in content.split(','):
-                            if ':' in pair:
-                                key, value = pair.split(':', 1)
-                                # Clean up key and value
-                                key = key.strip().strip('"\'')
-                                value = value.strip().strip('"\'')
-                                pairs[key] = value
+    #                     # Split by commas and process each key-value pair
+    #                     for pair in content.split(','):
+    #                         if ':' in pair:
+    #                             key, value = pair.split(':', 1)
+    #                             # Clean up key and value
+    #                             key = key.strip().strip('"\'')
+    #                             value = value.strip().strip('"\'')
+    #                             pairs[key] = value
                         
-                        print(f"Extracted pairs: {pairs}")
-                        parsed_json = pairs
-                    else:
-                        # Try standard repair methods
-                        # Convert to valid JSON format with proper quotes
-                        # Add quotes around property names if missing
-                        fixed_json = re.sub(r'([{,]\s*)(\w+)(\s*:)', r'\1"\2"\3', cleaned_json)
+    #                     print(f"Extracted pairs: {pairs}")
+    #                     parsed_json = pairs
+    #                 else:
+    #                     # Try standard repair methods
+    #                     # Convert to valid JSON format with proper quotes
+    #                     # Add quotes around property names if missing
+    #                     fixed_json = re.sub(r'([{,]\s*)(\w+)(\s*:)', r'\1"\2"\3', cleaned_json)
                         
-                        # Add quotes around string values if missing
-                        fixed_json = re.sub(r':\s*(\w+)([,}])', r': "\1"\2', fixed_json)
+    #                     # Add quotes around string values if missing
+    #                     fixed_json = re.sub(r':\s*(\w+)([,}])', r': "\1"\2', fixed_json)
                         
-                        # Ensure proper formatting
-                        fixed_json = fixed_json.replace("'", '"')
+    #                     # Ensure proper formatting
+    #                     fixed_json = fixed_json.replace("'", '"')
                         
-                        print(f"Fixed JSON using regex: {repr(fixed_json)}")
-                        parsed_json = json.loads(fixed_json)
-                except Exception as repair_error:
-                    print(f"JSON repair also failed: {str(repair_error)}")
-                    # Final fallback: Try to parse as YAML which is more lenient
-                    try:
-                        import yaml
-                        parsed_json = yaml.safe_load(cleaned_json)
-                        print(f"Parsed using YAML parser: {parsed_json}")
-                    except Exception as yaml_error:
-                        print(f"YAML parsing failed too: {str(yaml_error)}")
-                        # If all parsing fails, manually create a dict from the input
-                        # This is the last resort method
-                        print("Using manual character-by-character parsing as last resort")
-                        parsed_json = {"raw_input": cleaned_json}
+    #                     print(f"Fixed JSON using regex: {repr(fixed_json)}")
+    #                     parsed_json = json.loads(fixed_json)
+    #             except Exception as repair_error:
+    #                 print(f"JSON repair also failed: {str(repair_error)}")
+    #                 # Final fallback: Try to parse as YAML which is more lenient
+    #                 try:
+    #                     import yaml
+    #                     parsed_json = yaml.safe_load(cleaned_json)
+    #                     print(f"Parsed using YAML parser: {parsed_json}")
+    #                 except Exception as yaml_error:
+    #                     print(f"YAML parsing failed too: {str(yaml_error)}")
+    #                     # If all parsing fails, manually create a dict from the input
+    #                     # This is the last resort method
+    #                     print("Using manual character-by-character parsing as last resort")
+    #                     parsed_json = {"raw_input": cleaned_json}
                 
-                print(f"Parsing result: {parsed_json}")
+    #             print(f"Parsing result: {parsed_json}")
             
-            # Validate that it's a dictionary (key/value pairs)
-            if isinstance(parsed_json, dict):
-                custom_tags = parsed_json
-                print(f"Successfully parsed custom tags: {custom_tags}")
-            else:
-                print(f"::warning::INPUT_CUSTOM_TAGS_JSON is not a valid dictionary/object. Got type {type(parsed_json)}. It will be ignored.")
-        except Exception as e:
-            print(f"::warning::Failed to parse INPUT_CUSTOM_TAGS_JSON: {str(e)}.")
-            print(f"JSON content causing the error: {repr(custom_tags_json)}")
+    #         # Validate that it's a dictionary (key/value pairs)
+    #         if isinstance(parsed_json, dict):
+    #             custom_tags = parsed_json
+    #             print(f"Successfully parsed custom tags: {custom_tags}")
+    #         else:
+    #             print(f"::warning::INPUT_CUSTOM_TAGS_JSON is not a valid dictionary/object. Got type {type(parsed_json)}. It will be ignored.")
+    #     except Exception as e:
+    #         print(f"::warning::Failed to parse INPUT_CUSTOM_TAGS_JSON: {str(e)}.")
+    #         print(f"JSON content causing the error: {repr(custom_tags_json)}")
     
     version = os.environ.get('INPUT_VERSION')
     branch = os.environ.get('INPUT_BRANCH')
@@ -347,7 +347,7 @@ def main():
             sys.exit(1)
         else:
             print(f"\nSuccessfully published to {successful_publishes} relays")
-            print(f"Event ID: {event_id}")
+            print(f"Event ID: {event.id}")
             print("View on:")
             print(f"- https://njump.me/{event.id}")
 
