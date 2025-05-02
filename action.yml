@@ -59,7 +59,8 @@ runs:
               echo "INPUT_FILENAME=${{ inputs.filename }}" >> $GITHUB_ENV
               echo "INPUT_CONTENT=${{ inputs.content }}" >> $GITHUB_ENV
               echo "INPUT_SIZE=${{ inputs.size }}" >> $GITHUB_ENV
-              
+              echo "INPUT_NSEC_HEX=${{ inputs.nsec }}" >> $GITHUB_ENV
+
               # Use multiline environment variable syntax for JSON
               echo "INPUT_CUSTOM_TAGS_JSON<<EOF" >> $GITHUB_ENV
               echo "${{ inputs.customTagsJson }}" >> $GITHUB_ENV
