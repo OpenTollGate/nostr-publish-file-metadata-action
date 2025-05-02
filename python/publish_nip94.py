@@ -59,7 +59,6 @@ class NIP94Publisher:
             public_key=self.private_key.public_key.hex()
         )
 
-
         # Sign the event
         self.private_key.sign_event(event)
         
