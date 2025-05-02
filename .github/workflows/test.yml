@@ -30,7 +30,7 @@ jobs:
           originalHash: ${{ steps.upload.outputs.blossomHash }}
           filename: "testfile.txt"
           content: "This is a test file containing important data"
-          customTags: >-
+          customTags: |
               customTag1=tag1
               customTag2=tag2
 
