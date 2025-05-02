@@ -164,7 +164,7 @@ class NIP94Publisher:
                 relay_manager.close_connections()
         return False
 
-def set_output(self, name: str, value: str):
+def set_output(name: str, value: str):
     print(f"::set-output name={name}::{value}")
 
 def main():
@@ -225,8 +225,26 @@ def main():
             
             print(f"Cleaned JSON string: {repr(cleaned_json)}")
             
-            # Parse the JSON string
-            parsed_json = json.loads(cleaned_json)
+            try:
+                # Try standard JSON parsing first
+                parsed_json = json.loads(cleaned_json)
+            except json.JSONDecodeError as e:
+                # If standard parsing fails, try to fix common issues
+                print(f"Initial JSON parsing failed: {str(e)}")
+                
+                # Convert to valid JSON format with proper quotes
+                import re
+                
+                # Add quotes around property names if missing
+                # This regex finds property names without quotes before a colon
+                fixed_json = re.sub(r'([{,]\s*)(\w+)(\s*:)', r'\1"\2"\3', cleaned_json)
+                
+                # Add quotes around string values if missing
+                # This regex finds string values without quotes after a colon that aren't numbers
+                fixed_json = re.sub(r':\s*(\w+)([,}])', r': "\1"\2', fixed_json)
+                
+                print(f"Fixed JSON string: {repr(fixed_json)}")
+                parsed_json = json.loads(fixed_json)
             
             # Validate that it's a dictionary (key/value pairs)
             if isinstance(parsed_json, dict):
@@ -234,7 +252,7 @@ def main():
                 print(f"Successfully parsed custom tags: {custom_tags}")
             else:
                 print(f"::warning::INPUT_CUSTOM_TAGS_JSON is not a valid dictionary/object. Got type {type(parsed_json)}. It will be ignored.")
-        except json.JSONDecodeError as e:
+        except Exception as e:
             print(f"::warning::Failed to parse INPUT_CUSTOM_TAGS_JSON: {str(e)}.")
             print(f"JSON content causing the error: {repr(custom_tags_json)}")
     
