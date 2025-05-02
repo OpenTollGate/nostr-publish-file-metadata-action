@@ -205,18 +205,29 @@ def main():
     content = os.environ.get('INPUT_CONTENT', '')
     filename = os.environ.get('INPUT_FILENAME')
     
-    custom_tags_json = os.environ.get('INPUT_CUSTOM_TAGS_JSON')
+    custom_tags_str = os.environ.get('INPUT_CUSTOM_TAGS', '')
     
-    # Debug print the raw JSON string
-    print(f"Raw custom tags JSON: {custom_tags_json}")
+    # Debug print the raw custom tags string
+    print(f"Raw custom tags: {repr(custom_tags_str)}")
     
-    # Parse and validate custom tags JSON if provided
-    import demjson3
-    parsed_json = demjson3.decode(custom_tags_json)
-
-    print(f"Successfully parsed custom tags: {custom_tags}")
-
-    custom_tags = parsed_json
+    # Parse key=value pairs
+    custom_tags = {}
+    if custom_tags_str:
+        try:
+            # Split by lines and process each key=value pair
+            for line in custom_tags_str.strip().split('\n'):
+                if '=' in line:
+                    key, value = line.split('=', 1)
+                    # Clean up key and value
+                    key = key.strip()
+                    value = value.strip()
+                    custom_tags[key] = value
+                    
+            print(f"Successfully parsed custom tags: {custom_tags}")
+        except Exception as e:
+            print(f"::warning::Failed to parse custom tags: {str(e)}")
+            print(f"Custom tags content causing the error: {repr(custom_tags_str)}")
+            custom_tags = {}
     # if custom_tags_json:
     #     try:
     #         # Clean the input string if needed
