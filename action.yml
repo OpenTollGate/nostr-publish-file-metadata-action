@@ -48,7 +48,7 @@ runs:
     - name: Install Dependencies  
       run: |
         pip install nostr
-        pip install demjson
+        pip install demjson3
       shell: bash
 
     - name: Pass Inputs to Shell

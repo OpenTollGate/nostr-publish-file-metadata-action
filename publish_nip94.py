@@ -214,6 +214,8 @@ def main():
     import demjson
     parsed_json = demjson.decode(custom_tags_json)
 
+    print(f"Successfully parsed custom tags: {custom_tags}")
+
     custom_tags = parsed_json
     # if custom_tags_json:
     #     try:
