@@ -46,7 +46,9 @@ runs:
       with:
         python-version: '3.12'  
     - name: Install Dependencies  
-      run: pip install nostr
+      run: |
+        pip install nostr
+        pip install demjson
       shell: bash
 
     - name: Pass Inputs to Shell

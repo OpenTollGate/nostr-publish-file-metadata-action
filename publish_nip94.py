@@ -211,7 +211,10 @@ def main():
     print(f"Raw custom tags JSON: {custom_tags_json}")
     
     # Parse and validate custom tags JSON if provided
-    custom_tags = custom_tags_json
+    import demjson
+    parsed_json = demjson.decode(custom_tags_json)
+
+    custom_tags = parsed_json
     # if custom_tags_json:
     #     try:
     #         # Clean the input string if needed
