@@ -30,7 +30,7 @@ inputs:
     description: 'Description of the file content'
     required: false
   customTagsJson:
-    description: 'JSON string containing custom tags as key/value pairs'
+    description: 'JSON string containing custom tags as key/value pairs. Use >- YAML operator for multiline JSON and ensure double quotes around property names and values.'
     required: false
 outputs:
   eventId:

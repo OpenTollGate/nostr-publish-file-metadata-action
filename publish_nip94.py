@@ -222,6 +222,14 @@ def main():
             if (cleaned_json.startswith("'") and cleaned_json.endswith("'")) or \
                (cleaned_json.startswith('"') and cleaned_json.endswith('"')):
                 cleaned_json = cleaned_json[1:-1]
+                
+            # Replace newlines with spaces to handle multi-line JSON strings
+            # GitHub Actions may preserve these newlines in the environment variable
+            cleaned_json = cleaned_json.replace('\n', ' ')
+            
+            # Also compress multiple spaces to single spaces
+            import re
+            cleaned_json = re.sub(r'\s+', ' ', cleaned_json)
             
             print(f"Cleaned JSON string: {repr(cleaned_json)}")
             
