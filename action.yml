@@ -66,30 +66,30 @@ runs:
               echo "${{ inputs.customTagsJson }}" >> $GITHUB_ENV
               echo "EOF" >> $GITHUB_ENV
       shell: bash
-    - name: Fetch the number's square
-      id: get-square
-      run: python3 ${{ github.action_path }}/publish_nip94.py
+    - name: Publish the nip94 event
+      id: publish-nip94
       shell: bash
+      run: python3 ${{ github.action_path }}/publish_nip94.py
 
-    # - name: Run publisher
-    #   shell: bash
-    #   env:
-    #     INPUT_ARCHITECTURE: ${{ inputs.architecture }}
-    #     INPUT_VERSION: ${{ inputs.version }}
-    #     INPUT_BRANCH: ${{ inputs.branch }}
-    #     INPUT_DEVICE_ID: ${{ inputs.device_id }}
-    #     GITHUB_OUTPUT: ${{ github.output }}
-    #   run: |
-    #     touch "$GITHUB_OUTPUT"
-    #     echo "Running publisher with outputs to: $GITHUB_OUTPUT"
-    #     python3 ${{ github.action_path }}/publish_nip94.py
+    - name: Run publisher
+      shell: bash
+      env:
+        INPUT_ARCHITECTURE: ${{ inputs.architecture }}
+        INPUT_VERSION: ${{ inputs.version }}
+        INPUT_BRANCH: ${{ inputs.branch }}
+        INPUT_DEVICE_ID: ${{ inputs.device_id }}
+        GITHUB_OUTPUT: ${{ github.output }}
+      run: |
+        touch "$GITHUB_OUTPUT"
+        echo "Running publisher with outputs to: $GITHUB_OUTPUT"
+        python3 ${{ github.action_path }}/publish_nip94.py
 
-    #     EVENT_ID=$(grep '^eventId=' "$GITHUB_OUTPUT" | cut -d= -f2)
-    #     NOTE_ID=$(grep '^noteId=' "$GITHUB_OUTPUT" | cut -d= -f2)
-    #     echo "EVENT_ID=${EVENT_ID}" >> $GITHUB_ENV
-    #     echo "NOTE_ID=${NOTE_ID}" >> $GITHUB_ENV
+        EVENT_ID=$(grep '^eventId=' "$GITHUB_OUTPUT" | cut -d= -f2)
+        NOTE_ID=$(grep '^noteId=' "$GITHUB_OUTPUT" | cut -d= -f2)
+        echo "EVENT_ID=${EVENT_ID}" >> $GITHUB_ENV
+        echo "NOTE_ID=${NOTE_ID}" >> $GITHUB_ENV
 
-    #     echo "Contents of GITHUB_OUTPUT after publishing:"
-    #     cat "$GITHUB_OUTPUT"
-    #     echo "Contents of GITHUB_ENV after publishing:"
-    #     cat "$GITHUB_ENV"
+        echo "Contents of GITHUB_OUTPUT after publishing:"
+        cat "$GITHUB_OUTPUT"
+        echo "Contents of GITHUB_ENV after publishing:"
+        cat "$GITHUB_ENV"

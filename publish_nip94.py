@@ -164,6 +164,8 @@ class NIP94Publisher:
                 relay_manager.close_connections()
         return False
 
+def set_output(self, name: str, value: str):
+    print(f"::set-output name={name}::{value}")
 
 def main():
     # Get inputs from environment variables (GitHub Actions style)
@@ -269,32 +271,7 @@ def main():
         results = publisher.publish_event(event)
 
         # Set outputs using GitHub Actions Environment File and as fallback save to file
-        event_id = event.id  # Store event ID
-        note_id = f"note1{event.id}"  # Store note ID
-        
-        # Debug output handling
-        print("\n===== Output Debug Information =====")
-        print(f"Event ID to set: {event_id}")
-        print(f"Note ID to set: {note_id}")
-        
-        if 'GITHUB_OUTPUT' in os.environ:
-            github_output = os.environ['GITHUB_OUTPUT']
-            with open(github_output, 'a') as fh:
-                fh.write(f'eventId={event_id}\n')
-                fh.write(f'noteId=note1{event_id}\n')
-            print(f"Successfully wrote to GITHUB_OUTPUT file at {github_output}")
-            with open(github_output, 'r') as fh:
-                print("GITHUB_OUTPUT contents post-write:")
-                print(fh.read())
-
-        # Save as a fallback in case GITHUB_OUTPUT is not set
-        print("GITHUB_OUTPUT environment variable not set. Saving event ID to event_id.txt")
-        with open('event_id.txt', 'w') as f:
-            f.write(event_id)
-
-        # Also set environment variables as backup
-        os.environ['EVENT_ID'] = event_id
-        os.environ['NOTE_ID'] = note_id
+        set_output("event_id", event.id)
 
         # Check if we had at least one successful publish
         successful_publishes = sum(1 for result in results.values() if result)
@@ -305,8 +282,7 @@ def main():
             print(f"\nSuccessfully published to {successful_publishes} relays")
             print(f"Event ID: {event_id}")
             print("View on:")
-            print(f"- https://snort.social/e/{note_id}")
-            print(f"- https://primal.net/e/{event_id}")
+            print(f"- https://njump.me/{event.id}")
 
     except Exception as e:
         print(f"::error::Failed to publish NIP-94 event: {str(e)}")
