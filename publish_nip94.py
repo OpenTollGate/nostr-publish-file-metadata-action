@@ -212,7 +212,7 @@ def main():
     
     # Parse and validate custom tags JSON if provided
     import demjson3
-    parsed_json = demjson.decode(custom_tags_json)
+    parsed_json = demjson3.decode(custom_tags_json)
 
     print(f"Successfully parsed custom tags: {custom_tags}")
 
