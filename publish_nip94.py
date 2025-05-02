@@ -206,21 +206,36 @@ def main():
     
     custom_tags_json = os.environ.get('INPUT_CUSTOM_TAGS_JSON')
     
+    # Debug print the raw JSON string
+    print(f"Raw custom tags JSON: {repr(custom_tags_json)}")
+    
     # Parse and validate custom tags JSON if provided
     custom_tags = {}
     if custom_tags_json:
         try:
+            # Clean the input string if needed
+            # Sometimes multiline environment variables contain extra whitespace or quotes
+            cleaned_json = custom_tags_json.strip()
+            
+            # If the string starts and ends with single quotes, remove them
+            if (cleaned_json.startswith("'") and cleaned_json.endswith("'")) or \
+               (cleaned_json.startswith('"') and cleaned_json.endswith('"')):
+                cleaned_json = cleaned_json[1:-1]
+            
+            print(f"Cleaned JSON string: {repr(cleaned_json)}")
+            
             # Parse the JSON string
-            parsed_json = json.loads(custom_tags_json)
+            parsed_json = json.loads(cleaned_json)
             
             # Validate that it's a dictionary (key/value pairs)
             if isinstance(parsed_json, dict):
                 custom_tags = parsed_json
                 print(f"Successfully parsed custom tags: {custom_tags}")
             else:
-                print("::warning::INPUT_CUSTOM_TAGS_JSON is not a valid dictionary/object. It will be ignored.")
+                print(f"::warning::INPUT_CUSTOM_TAGS_JSON is not a valid dictionary/object. Got type {type(parsed_json)}. It will be ignored.")
         except json.JSONDecodeError as e:
-            print(f"::warning::Failed to parse INPUT_CUSTOM_TAGS_JSON: {str(e)}. It will be ignored.")
+            print(f"::warning::Failed to parse INPUT_CUSTOM_TAGS_JSON: {str(e)}.")
+            print(f"JSON content causing the error: {repr(custom_tags_json)}")
     
     version = os.environ.get('INPUT_VERSION')
     branch = os.environ.get('INPUT_BRANCH')
