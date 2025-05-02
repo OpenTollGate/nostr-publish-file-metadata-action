@@ -62,7 +62,9 @@ runs:
               echo "INPUT_NSEC_HEX=${{ inputs.nsec }}" >> $GITHUB_ENV
 
               # Use multiline environment variable syntax for JSON
-              echo "INPUT_CUSTOM_TAGS_JSON=${{ inputs.customTagsJson }}" >> $GITHUB_ENV
+              echo "INPUT_CUSTOM_TAGS_JSON<<EOF" >> $GITHUB_ENV
+              echo "${{ inputs.customTagsJson }}" >> $GITHUB_ENV
+              echo "EOF" >> $GITHUB_ENV
       shell: bash
     - name: Publish the nip94 event
       id: publish-nip94
