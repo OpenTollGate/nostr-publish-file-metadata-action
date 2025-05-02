@@ -274,6 +274,7 @@ def main():
             print(f"Event ID: {event.id}")
             print("View on:")
             print(f"- https://njump.me/{event.id}")
+            sys.exit(0)
 
     except Exception as e:
         print(f"::error::Failed to publish NIP-94 event: {str(e)}")
