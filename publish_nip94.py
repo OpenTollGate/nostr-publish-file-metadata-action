@@ -165,8 +165,8 @@ class NIP94Publisher:
         return False
 
 def set_output(name: str, value: str):
-    # print(f"::set-output name={name}::{value}")
-    os.environ[name] = value
+    with open(os.environ["GITHUB_OUTPUT"], 'a') as fh:
+        fh.write('{name}={value}\n')
 
 
 def main():
