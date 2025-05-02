@@ -35,6 +35,7 @@ inputs:
 outputs:
   eventId:
     description: 'Raw Nostr event ID'
+    value: ${{ steps.publish.outputs.eventId }}
 runs:
   using: 'composite'
   steps:
@@ -73,4 +74,3 @@ runs:
       shell: bash
       run: |
         echo 'bla:  ${{ steps.publish.outputs.eventId }}'
-        echo "eventId=${{ steps.publish.outputs.eventId }}" >> $GITHUB_OUTPUT
