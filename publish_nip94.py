@@ -166,7 +166,7 @@ class NIP94Publisher:
 
 def set_output(name: str, value: str):
     with open(os.environ["GITHUB_OUTPUT"], 'a') as fh:
-        fh.write('{name}={value}\n')
+        fh.write(f'{name}={value}\n')
 
 
 def main():
