@@ -28,12 +28,8 @@ class NIP94Publisher:
                            original_hash: str, content: str = "",
                            filename: Optional[str] = None,
                            size: Optional[int] = None,
-                           dimensions: Optional[str] = None,
-                           architecture: Optional[str] = None,
-                           version: Optional[str] = None,
-                           branch: Optional[str] = None,
-                           device_id: Optional[str] = None) -> Event:
-        """Create a NIP-94 event with the required metadata"""
+                           custom_tags: Dict[str, str] = {}) -> Event:
+        """Create a NIP-94 event with the required metadata and optional custom tags"""
 
         print("Creating NIP-94 event...")
 
@@ -50,17 +46,11 @@ class NIP94Publisher:
             tags.append(["filename", filename])
         if size is not None:
             tags.append(["size", str(size)])
-        if dimensions:
-            tags.append(["dim", dimensions])
-        if architecture:
-            tags.append(["arch", architecture])
-        if version:
-            tags.append(["version", version])
-        if branch:
-            tags.append(["branch", branch])
-        if device_id:
-            tags.append(["id", device_id])
-
+            
+        # Add any custom tags
+        for key, value in custom_tags.items():
+            tags.append([key, str(value)])
+                
         # Create event with kind 1063 (NIP-94)
         event = Event(
             content=content,
@@ -214,8 +204,25 @@ def main():
     # Optional inputs
     content = os.environ.get('INPUT_CONTENT', '')
     filename = os.environ.get('INPUT_FILENAME')
-    dimensions = os.environ.get('INPUT_DIMENSIONS')
-    architecture = os.environ.get('INPUT_ARCHITECTURE')
+    
+    custom_tags_json = os.environ.get('INPUT_CUSTOM_TAGS_JSON')
+    
+    # Parse and validate custom tags JSON if provided
+    custom_tags = {}
+    if custom_tags_json:
+        try:
+            # Parse the JSON string
+            parsed_json = json.loads(custom_tags_json)
+            
+            # Validate that it's a dictionary (key/value pairs)
+            if isinstance(parsed_json, dict):
+                custom_tags = parsed_json
+                print(f"Successfully parsed custom tags: {custom_tags}")
+            else:
+                print("::warning::INPUT_CUSTOM_TAGS_JSON is not a valid dictionary/object. It will be ignored.")
+        except json.JSONDecodeError as e:
+            print(f"::warning::Failed to parse INPUT_CUSTOM_TAGS_JSON: {str(e)}. It will be ignored.")
+    
     version = os.environ.get('INPUT_VERSION')
     branch = os.environ.get('INPUT_BRANCH')
     device_id = os.environ.get('INPUT_DEVICE_ID')
@@ -232,11 +239,7 @@ def main():
             original_hash=original_hash,
             content=content,
             filename=filename,
-            dimensions=dimensions,
-            architecture=architecture,
-            version=version,
-            branch=branch,
-            device_id=device_id
+            custom_tags=custom_tags
         )
 
         event_dict = {
