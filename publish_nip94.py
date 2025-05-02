@@ -165,7 +165,9 @@ class NIP94Publisher:
         return False
 
 def set_output(name: str, value: str):
-    print(f"::set-output name={name}::{value}")
+    # print(f"::set-output name={name}::{value}")
+    os.environ[name] = value
+
 
 def main():
     # Get inputs from environment variables (GitHub Actions style)
@@ -274,7 +276,6 @@ def main():
             print(f"Event ID: {event.id}")
             print("View on:")
             print(f"- https://njump.me/{event.id}")
-            sys.exit(0)
 
     except Exception as e:
         print(f"::error::Failed to publish NIP-94 event: {str(e)}")
