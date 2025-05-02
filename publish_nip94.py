@@ -28,12 +28,8 @@ class NIP94Publisher:
                            original_hash: str, content: str = "",
                            filename: Optional[str] = None,
                            size: Optional[int] = None,
-                           dimensions: Optional[str] = None,
-                           architecture: Optional[str] = None,
-                           version: Optional[str] = None,
-                           branch: Optional[str] = None,
-                           device_id: Optional[str] = None) -> Event:
-        """Create a NIP-94 event with the required metadata"""
+                           custom_tags: Dict[str, str] = {}) -> Event:
+        """Create a NIP-94 event with the required metadata and optional custom tags"""
 
         print("Creating NIP-94 event...")
 
@@ -50,17 +46,11 @@ class NIP94Publisher:
             tags.append(["filename", filename])
         if size is not None:
             tags.append(["size", str(size)])
-        if dimensions:
-            tags.append(["dim", dimensions])
-        if architecture:
-            tags.append(["arch", architecture])
-        if version:
-            tags.append(["version", version])
-        if branch:
-            tags.append(["branch", branch])
-        if device_id:
-            tags.append(["id", device_id])
-
+            
+        # Add any custom tags
+        for key, value in custom_tags.items():
+            tags.append([key, str(value)])
+                
         # Create event with kind 1063 (NIP-94)
         event = Event(
             content=content,
@@ -68,7 +58,6 @@ class NIP94Publisher:
             tags=tags,
             public_key=self.private_key.public_key.hex()
         )
-
 
         # Sign the event
         self.private_key.sign_event(event)
@@ -175,6 +164,10 @@ class NIP94Publisher:
                 relay_manager.close_connections()
         return False
 
+def set_output(name: str, value: str):
+    with open(os.environ["GITHUB_OUTPUT"], 'a') as fh:
+        fh.write(f'{name}={value}\n')
+
 
 def main():
     # Get inputs from environment variables (GitHub Actions style)
@@ -207,15 +200,37 @@ def main():
         random_private_key = PrivateKey(secrets.token_bytes(32))
         nsec_hex = random_private_key.hex()
         print(f"Generated random nsec_hex: {nsec_hex}")
-        sys.exit(1)
     else:
         print(f"nsec_hex is not empty")  # Debug print
 
     # Optional inputs
     content = os.environ.get('INPUT_CONTENT', '')
     filename = os.environ.get('INPUT_FILENAME')
-    dimensions = os.environ.get('INPUT_DIMENSIONS')
-    architecture = os.environ.get('INPUT_ARCHITECTURE')
+    
+    custom_tags_str = os.environ.get('INPUT_CUSTOM_TAGS', '')
+    
+    # Debug print the raw custom tags string
+    print(f"Raw custom tags: {repr(custom_tags_str)}")
+    
+    # Parse key=value pairs
+    custom_tags = {}
+    if custom_tags_str:
+        try:
+            # Split by lines and process each key=value pair
+            for line in custom_tags_str.strip().split('\n'):
+                if '=' in line:
+                    key, value = line.split('=', 1)
+                    # Clean up key and value
+                    key = key.strip()
+                    value = value.strip()
+                    custom_tags[key] = value
+                    
+            print(f"Successfully parsed custom tags: {custom_tags}")
+        except Exception as e:
+            print(f"::warning::Failed to parse custom tags: {str(e)}")
+            print(f"Custom tags content causing the error: {repr(custom_tags_str)}")
+            sys.exit(1)
+
     version = os.environ.get('INPUT_VERSION')
     branch = os.environ.get('INPUT_BRANCH')
     device_id = os.environ.get('INPUT_DEVICE_ID')
@@ -232,11 +247,7 @@ def main():
             original_hash=original_hash,
             content=content,
             filename=filename,
-            dimensions=dimensions,
-            architecture=architecture,
-            version=version,
-            branch=branch,
-            device_id=device_id
+            custom_tags=custom_tags
         )
 
         event_dict = {
@@ -253,32 +264,7 @@ def main():
         results = publisher.publish_event(event)
 
         # Set outputs using GitHub Actions Environment File and as fallback save to file
-        event_id = event.id  # Store event ID
-        note_id = f"note1{event.id}"  # Store note ID
-        
-        # Debug output handling
-        print("\n===== Output Debug Information =====")
-        print(f"Event ID to set: {event_id}")
-        print(f"Note ID to set: {note_id}")
-        
-        if 'GITHUB_OUTPUT' in os.environ:
-            github_output = os.environ['GITHUB_OUTPUT']
-            with open(github_output, 'a') as fh:
-                fh.write(f'eventId={event_id}\n')
-                fh.write(f'noteId=note1{event_id}\n')
-            print(f"Successfully wrote to GITHUB_OUTPUT file at {github_output}")
-            with open(github_output, 'r') as fh:
-                print("GITHUB_OUTPUT contents post-write:")
-                print(fh.read())
-
-        # Save as a fallback in case GITHUB_OUTPUT is not set
-        print("GITHUB_OUTPUT environment variable not set. Saving event ID to event_id.txt")
-        with open('event_id.txt', 'w') as f:
-            f.write(event_id)
-
-        # Also set environment variables as backup
-        os.environ['EVENT_ID'] = event_id
-        os.environ['NOTE_ID'] = note_id
+        set_output("eventId", event.id)
 
         # Check if we had at least one successful publish
         successful_publishes = sum(1 for result in results.values() if result)
@@ -287,10 +273,9 @@ def main():
             sys.exit(1)
         else:
             print(f"\nSuccessfully published to {successful_publishes} relays")
-            print(f"Event ID: {event_id}")
+            print(f"Event ID: {event.id}")
             print("View on:")
-            print(f"- https://snort.social/e/{note_id}")
-            print(f"- https://primal.net/e/{event_id}")
+            print(f"- https://njump.me/{event.id}")
 
     except Exception as e:
         print(f"::error::Failed to publish NIP-94 event: {str(e)}")
