@@ -73,3 +73,4 @@ runs:
       shell: bash
       run: |
         echo 'bla:  ${{ steps.publish-nip94.outputs.eventId }}'
+        echo "eventId=${{ steps.publish.outputs.eventId }}" >> $GITHUB_OUTPUT

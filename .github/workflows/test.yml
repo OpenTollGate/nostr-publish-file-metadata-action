@@ -55,14 +55,7 @@ jobs:
         uses: ./python/verify
         continue-on-error: true
         with:
-          eventId: ${{ env.EVENT_ID }}
-          relays: "wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/"
-
-      - name: Retry Verification
-        if: steps.verify.outcome == 'failure'
-        uses: ./python/verify
-        with:
-          eventId: ${{ env.EVENT_ID }}
+          eventId: ${{ steps.publish.outputs.eventId }}
           relays: "wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/"
 
 
