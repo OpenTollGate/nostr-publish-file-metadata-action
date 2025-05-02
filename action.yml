@@ -33,7 +33,7 @@ inputs:
     description: 'Custom tags as key=value pairs, one per line. Use >- YAML operator for multiline input.'
     required: false
 outputs:
-  eventId:
+  event_id:
     description: 'Raw Nostr event ID'
   noteId:
     description: 'Bech32-encoded note ID (note1...)'
