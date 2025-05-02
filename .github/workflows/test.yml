@@ -1,126 +1,7 @@
 name: Test NIP-94 Publishing
 on: [push, pull_request]
 jobs:
-  test-javascript-nip94-publish:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        
-      - name: Create test file
-        run: echo "Nostr file metadata test - $(date)" > testfile.txt
-      
-      # Update working directory for JS implementation
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        working-directory: ./js
-        run: npm install
-
-      - name: Build
-        working-directory: ./js
-        run: npm run build
-
-      # Add step to make the script executable
-      - name: Make script executable
-        run: chmod +x js/dist/index.js
-      
-      - name: Upload to Blossom
-        id: upload
-        continue-on-error: true
-        uses: c03rad0r/upload-blossom-action@using-nsec-argument
-        with:
-          host: ${{ secrets.HOST }}
-          filePath: testfile.txt
-          nostrPrivateKey: ${{ secrets.NSEC_HEX }}
-
-      - name: Upload to Blossom (Retry 1)
-        id: upload-retry-1
-        if: steps.upload.outcome == 'failure'
-        continue-on-error: true
-        uses: c03rad0r/upload-blossom-action@using-nsec-argument
-        with:
-          host: ${{ secrets.HOST }}
-          filePath: testfile.txt
-          nostrPrivateKey: ${{ secrets.NSEC_HEX }}
-
-      - name: Upload to Blossom (Final Attempt)
-        id: upload-retry-2
-        if: steps.upload-retry-1.outcome == 'failure'
-        uses: c03rad0r/upload-blossom-action@using-nsec-argument
-        with:
-          host: ${{ secrets.HOST }}
-          filePath: testfile.txt
-          nostrPrivateKey: ${{ secrets.NSEC_HEX }}
-
-      - name: Publish NIP-94 Metadata
-        continue-on-error: true
-        id: publish
-        timeout-minutes: 2
-        uses: ./js
-        with:
-          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/
-          url: ${{ steps.upload.outputs.blossomUrl }}
-          mimeType: text/plain
-          fileHash: ${{ steps.upload.outputs.blossomHash }}
-          originalHash: ${{ steps.upload.outputs.blossomHash }}
-          content: "Test file uploaded via GitHub Actions"
-          nsec: ${{ secrets.NSEC }}
-          size: ${{ steps.upload.outputs.size }}
-
-      - name: Publish NIP-94 Metadata (Retry 1)
-        if: steps.publish.outcome == 'failure'
-        continue-on-error: true
-        id: publish-retry-1
-        uses: ./js
-        with:
-          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/
-          url: ${{ steps.upload.outputs.blossomUrl }}
-          mimeType: text/plain
-          fileHash: ${{ steps.upload.outputs.blossomHash }}
-          originalHash: ${{ steps.upload.outputs.blossomHash }}
-          content: "Test file uploaded via GitHub Actions"
-          nsec: ${{ secrets.NSEC_HEX }}
-          size: ${{ steps.upload.outputs.size }}
-
-      - name: Publish NIP-94 Metadata (Final Attempt)
-        if: steps.publish-retry-1.outcome == 'failure'
-        id: publish-retry-2
-        uses: ./js
-        with:
-          relays: wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/
-          url: ${{ steps.upload.outputs.blossomUrl }}
-          mimeType: text/plain
-          fileHash: ${{ steps.upload.outputs.blossomHash }}
-          originalHash: ${{ steps.upload.outputs.blossomHash }}
-          content: "Test file uploaded via GitHub Actions"
-          nsec: ${{ secrets.NSEC_HEX }}
-          size: ${{ steps.upload.outputs.size }}
-
-      - name: Verify Event Publication
-        run: |
-          EVENT_ID="${{ steps.publish.outputs.eventId }}"
-          RELAYS=("wss://relay.damus.io" "wss://nos.lol" "wss://nostr.mom")
-          
-          npm install -g wscat
-          
-          for relay in "${RELAYS[@]}"; do
-            echo "Checking $relay for event..."
-            echo '["REQ", "verify", {"ids":["'$EVENT_ID'"]}]' | wscat -c "$relay" -w 5 | grep -q "$EVENT_ID" && {
-              echo "Event found on $relay"
-              exit 0
-            }
-          done
-          
-          echo "Event not found on any relay"
-          # exit 1
-
+  
   test-python-implementation:
     runs-on: ubuntu-latest
     steps:
@@ -140,7 +21,7 @@ jobs:
 
       - name: Publish NIP-94 Metadata (Python)
         id: publish
-        uses: ./python
+        uses: ./
         with:
           relays: "wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/"
           url: ${{ steps.upload.outputs.blossomUrl }}
@@ -149,25 +30,15 @@ jobs:
           originalHash: ${{ steps.upload.outputs.blossomHash }}
           filename: "testfile.txt"
           content: "This is a test file containing important data"
-          architecture: "x86_64"
-          device_id: "glinet_mt3000"
-          nsec: ${{ secrets.NSEC_HEX }}
-          size: ${{ steps.upload.outputs.size }}
-          version: "1.0.0"
-          branch: "main"
+          customTags: |
+              customTag1=tag1
+              customTag2=tag2
 
       - name: Debug Outputs
-        env:
-          EVENT_ID: ${{ steps.publish.outputs.eventId }}
-          NOTE_ID: ${{ steps.publish.outputs.noteId }}
         run: |
           echo "Publish step outputs:"
           echo "  eventId: '${{ steps.publish.outputs.eventId }}'"
-          echo "  noteId: '${{ steps.publish.outputs.noteId }}'"
-
-          echo "Environment variables:"
-          echo "EVENT_ID: $EVENT_ID"
-          echo "NOTE_ID: $NOTE_ID"
+          echo "EVENT_ID=${{ steps.publish.outputs.eventId }}" >> $GITHUB_ENV
 
           echo "Upload step outputs:"
           echo "  blossomUrl: '${{ steps.upload.outputs.blossomUrl }}'"
@@ -177,36 +48,14 @@ jobs:
           echo "===== Debug Publish Step ====="
           echo "Publish step status: ${{ steps.publish.outcome }}"
           echo "Publish step result: ${{ steps.publish.result }}"
-          
-          # Try to read from GITHUB_OUTPUT if it exists
-          if [[ -f "$GITHUB_OUTPUT" ]]; then
-            echo "Contents of GITHUB_OUTPUT:"
-            echo "$GITHUB_OUTPUT"
-          fi
-
-          echo "File contents:"
-          if [ -f event_id.txt ]; then
-            cat event_id.txt
-          fi
-
-#      - name: Store Event ID in Environment
-#        run: |
-#          EVENT_ID=${{ steps.publish.outputs.eventId }}
-#          echo "EVENT_ID=${EVENT_ID}" >> $GITHUB_ENV
+        
 
       - name: Verify NIP-94 Event
         id: verify
         uses: ./python/verify
         continue-on-error: true
         with:
-          eventId: ${{ env.EVENT_ID }}
-          relays: "wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/"
-
-      - name: Retry Verification
-        if: steps.verify.outcome == 'failure'
-        uses: ./python/verify
-        with:
-          eventId: ${{ env.EVENT_ID }}
+          eventId: ${{ steps.publish.outputs.eventId }}
           relays: "wss://relay.damus.io,wss://nos.lol,wss://nostr.mom/"
 
 

@@ -1,0 +1,76 @@
+# python/action.yml
+name: 'NIP-94 Metadata Publisher (Python)'
+description: 'Publishes NIP-94 file metadata events to Nostr using Python'
+inputs:
+  relays:
+    description: 'Comma-separated list of Nostr relays'
+    required: true
+  url:
+    description: 'URL to download the file'
+    required: true
+  mimeType:
+    description: 'MIME type of the file'
+    required: true
+  fileHash:
+    description: 'SHA-256 hash of the file'
+    required: true
+  originalHash:
+    description: 'SHA-256 hash of the original file before any transformations'
+    required: true
+  nsec:
+    description: 'Nostr private key in hex format'
+    required: true
+  filename:
+    description: 'Original filename of the file'
+    required: false
+  size:
+    description: 'File size in bytes (optional)'
+    required: false
+  content:
+    description: 'Description of the file content'
+    required: false
+  customTags:
+    description: 'Custom tags as key=value pairs, one per line. Use >- YAML operator for multiline input.'
+    required: false
+outputs:
+  eventId:
+    description: 'Raw Nostr event ID'
+    value: ${{ steps.publish.outputs.eventId }}
+runs:
+  using: 'composite'
+  steps:
+    # Skip pythons setup to save time when possible
+    - name: Install Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'  
+    - name: Install Dependencies
+      run: pip install nostr
+      shell: bash
+
+    - name: Pass Inputs to Shell
+      run: |
+              echo "INPUT_RELAYS=${{ inputs.relays }}" >> $GITHUB_ENV
+              echo "INPUT_URL=${{ inputs.url }}" >> $GITHUB_ENV
+              echo "INPUT_MIMETYPE=${{ inputs.mimeType }}" >> $GITHUB_ENV
+              echo "INPUT_FILEHASH=${{ inputs.fileHash }}" >> $GITHUB_ENV
+              echo "INPUT_ORIGINALHASH=${{ inputs.originalHash }}" >> $GITHUB_ENV
+              echo "INPUT_FILENAME=${{ inputs.filename }}" >> $GITHUB_ENV
+              echo "INPUT_CONTENT=${{ inputs.content }}" >> $GITHUB_ENV
+              echo "INPUT_SIZE=${{ inputs.size }}" >> $GITHUB_ENV
+              echo "INPUT_NSEC_HEX=${{ inputs.nsec }}" >> $GITHUB_ENV
+
+              # Use multiline environment variable syntax for custom tags
+              echo "INPUT_CUSTOM_TAGS<<EOF" >> $GITHUB_ENV
+              echo "${{ inputs.customTags }}" >> $GITHUB_ENV
+              echo "EOF" >> $GITHUB_ENV
+      shell: bash
+    - name: Publish the nip94 event
+      id: publish
+      shell: bash
+      run: python3 ${{ github.action_path }}/publish_nip94.py
+
+    - name: Run publisher
+      shell: bash
+      run: |
+        echo 'bla:  ${{ steps.publish.outputs.eventId }}'
